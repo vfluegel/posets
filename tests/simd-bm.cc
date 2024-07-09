@@ -11,9 +11,9 @@
 
 #include <spot/misc/timer.hh>
 
-#include <utils/vector_mm.hh>
-#include "downsets.hh"
-#include "vectors.hh"
+#include <downsets/utils/vector_mm.hh>
+#include <downsets/downsets.hh>
+#include <downsets/vectors.hh>
 
 #include "test_maker.hh"
 
@@ -22,6 +22,10 @@
 #define NITEMS (1 << 14)
 #define MAXVAL 3
 
+size_t downsets::vectors::bool_threshold = 2 * DIMENSION;
+size_t downsets::vectors::bitset_threshold = 2 * DIMENSION;
+
+namespace utils = downsets::utils;
 using test_value_type = char;
 
 template <typename T>
@@ -60,26 +64,26 @@ struct test_t : public generic_test<void> {
     }
 };
 
-namespace vectors{
+namespace downsets::vectors {
   template <typename T>
-  using simd_array_backed_sum_fixed = vectors::simd_array_backed_sum<T, DIMENSION>;
+  using simd_array_backed_sum_fixed = downsets::vectors::simd_array_backed_sum<T, DIMENSION>;
 
   template <typename T>
-  using simd_array_backed_fixed = vectors::simd_array_backed<T, DIMENSION>;
+  using simd_array_backed_fixed = downsets::vectors::simd_array_backed<T, DIMENSION>;
 
   template <typename T>
-  using array_backed_fixed = vectors::array_backed<T, DIMENSION>;
+  using array_backed_fixed = downsets::vectors::array_backed<T, DIMENSION>;
 
   template <typename T>
-  using array_backed_sum_fixed = vectors::array_backed_sum<T, DIMENSION>;
+  using array_backed_sum_fixed = downsets::vectors::array_backed_sum<T, DIMENSION>;
 }
 
-using vector_types = type_list<vectors::vector_backed<test_value_type>,
-                               vectors::array_backed_fixed<test_value_type>,
-                               vectors::array_backed_sum_fixed<test_value_type>,
-                               vectors::simd_vector_backed<test_value_type>,
-                               vectors::simd_array_backed_fixed<test_value_type>,
-                               vectors::simd_array_backed_sum_fixed<test_value_type>>;
+using vector_types = type_list<downsets::vectors::vector_backed<test_value_type>,
+                               downsets::vectors::array_backed_fixed<test_value_type>,
+                               downsets::vectors::array_backed_sum_fixed<test_value_type>,
+                               downsets::vectors::simd_vector_backed<test_value_type>,
+                               downsets::vectors::simd_array_backed_fixed<test_value_type>,
+                               downsets::vectors::simd_array_backed_sum_fixed<test_value_type>>;
 
 using set_types = template_type_list<downsets::vector_backed,
                                      downsets::vector_backed_bin>;
@@ -111,11 +115,11 @@ int main (int argc, char* argv[]) {
     usage (argv[0]);
 
   auto implem = std::string ("downsets::") + argv[1]
-    + "<vectors::" + argv[2] + (argv[2][strlen (argv[2]) - 1] == '>' ? " " : "") + ">";
+    + "<downsets::vectors::" + argv[2] + (argv[2][strlen (argv[2]) - 1] == '>' ? " " : "") + ">";
 
   try {
-    vectors::bool_threshold = 128;
-    vectors::bitset_threshold = 128;
+    downsets::vectors::bool_threshold = 128;
+    downsets::vectors::bitset_threshold = 128;
     auto& tests = test_list<void>::list;
     tests[implem] ();
   } catch (std::bad_function_call& e) {

@@ -36,7 +36,7 @@ namespace downsets {
   template <typename VecType>
   struct all {};
 }
-namespace vectors {
+namespace downsets::vectors {
   struct all {};
 }
 
@@ -67,8 +67,8 @@ void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
   if constexpr (CreateAll) {
     for (auto&& ts : {
         typestring (downsets::all<VecType>),
-        typestring (SetType<vectors::all>),
-        typestring (downsets::all<vectors::all>)
+        typestring (SetType<downsets::vectors::all>),
+        typestring (downsets::all<downsets::vectors::all>)
       }) {
       auto prev = tests[ts];
       tests[ts] = [prev, test] () {

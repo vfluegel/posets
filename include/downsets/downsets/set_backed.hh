@@ -37,7 +37,7 @@ namespace downsets {
       }
 
       bool insert (Vector&& v) {
-        reference_wrapper_set<const Vector> to_remove;
+        utils::reference_wrapper_set<const Vector> to_remove;
         bool should_be_inserted = true;
 
         for (const auto& e : vector_set) {

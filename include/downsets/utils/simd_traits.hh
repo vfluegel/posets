@@ -2,7 +2,7 @@
 
 #include <experimental/simd>
 
-namespace utils {
+namespace downsets::utils {
   template <typename Elt>
   struct simd_traits {
 #if SIMD_IS_MAX

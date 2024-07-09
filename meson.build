@@ -15,11 +15,5 @@ add_global_arguments (extra_args, language: 'cpp')
 
 boost_dep = dependency ('boost')
 
-if cpp.has_header ('experimental/simd')
-  stdsimd_dep = declare_dependency ()
-else
-  stdsimd_dep = dependency ('stdsimd')
-endif
-
 subdir ('include')
 subdir ('tests')

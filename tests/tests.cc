@@ -10,8 +10,11 @@
 
 #include "test_maker.hh"
 
-#include "downsets.hh"
-#include "vectors.hh"
+#include <downsets/downsets.hh>
+#include <downsets/vectors.hh>
+
+size_t downsets::vectors::bool_threshold = 128;
+size_t downsets::vectors::bitset_threshold = 128;
 
 template<class T, class = void>
 struct has_insert : std::false_type {};
@@ -221,28 +224,28 @@ void usage (const char* progname) {
   exit (0);
 }
 
-namespace vectors {
+namespace downsets::vectors {
   template <typename T>
-  using simd_array_backed_sum_fixed = vectors::simd_array_backed_sum<T, 10>;
+  using simd_array_backed_sum_fixed = downsets::vectors::simd_array_backed_sum<T, 10>;
 
   template <typename T>
-  using simd_array_backed_fixed = vectors::simd_array_backed<T, 10>;
+  using simd_array_backed_fixed = downsets::vectors::simd_array_backed<T, 10>;
 
   template <typename T>
-  using array_backed_fixed = vectors::array_backed<T, 10>;
+  using array_backed_fixed = downsets::vectors::array_backed<T, 10>;
 
   template <typename T>
-  using array_backed_sum_fixed = vectors::array_backed_sum<T, 10>;
+  using array_backed_sum_fixed = downsets::vectors::array_backed_sum<T, 10>;
 
 }
 
-using vector_types = type_list<vectors::vector_backed<char>,
-                               vectors::array_backed_fixed<char>,
-                               vectors::array_backed_sum_fixed<char>,
-                               vectors::simd_vector_backed<char>,
-                               vectors::simd_array_backed_fixed<char>,
-                               vectors::simd_array_backed_sum_fixed<char>,
-                               vectors::X_and_bitset<vectors::simd_vector_backed<char>, 1>>;
+using vector_types = type_list<downsets::vectors::vector_backed<char>,
+                               downsets::vectors::array_backed_fixed<char>,
+                               downsets::vectors::array_backed_sum_fixed<char>,
+                               downsets::vectors::simd_vector_backed<char>,
+                               downsets::vectors::simd_array_backed_fixed<char>,
+                               downsets::vectors::simd_array_backed_sum_fixed<char>,
+                               downsets::vectors::X_and_bitset<downsets::vectors::simd_vector_backed<char>, 1>>;
 
 using set_types = template_type_list<//downsets::full_set, ; too slow.
                                      downsets::kdtree_backed,
@@ -262,11 +265,11 @@ int main(int argc, char* argv[]) {
     usage (argv[0]);
 
   auto implem = std::string ("downsets::") + argv[1]
-    + "<vectors::" + argv[2] + (argv[2][strlen (argv[2]) - 1] == '>' ? " " : "") + ">";
+    + "<downsets::vectors::" + argv[2] + (argv[2][strlen (argv[2]) - 1] == '>' ? " " : "") + ">";
 
   try {
-    vectors::bool_threshold = 128;
-    vectors::bitset_threshold = 128;
+    downsets::vectors::bool_threshold = 128;
+    downsets::vectors::bitset_threshold = 128;
     auto& tests = test_list<void>::list;
     tests[implem] ();
     return 0;

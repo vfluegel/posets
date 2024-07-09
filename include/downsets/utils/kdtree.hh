@@ -21,7 +21,7 @@
  *
  * Coded by Guillermo A. Perez
  */
-namespace utils {
+namespace downsets::utils {
   // Forward definition for the operator<<
   template <typename>
   class kdtree;

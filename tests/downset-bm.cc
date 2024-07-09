@@ -24,21 +24,25 @@
 #include <spot/misc/timer.hh>
 
 #undef NO_VERBOSE
-#include <utils/verbose.hh>
+#include "verbose.hh"
 
-#include <utils/vector_mm.hh>
-#include "downsets.hh"
-#include "vectors.hh"
+#include <downsets/utils/vector_mm.hh>
+#include <downsets/downsets.hh>
+#include <downsets/vectors.hh>
 
 #include "test_maker.hh"
 
 #include <valgrind/callgrind.h>
 
 using namespace std::literals;
+namespace utils = downsets::utils;
 
 #ifndef DIMENSION
 # define DIMENSION 128 * 1024
 #endif
+
+size_t downsets::vectors::bool_threshold = DIMENSION;
+size_t downsets::vectors::bitset_threshold = DIMENSION;
 
 int               utils::verbose = 0;
 utils::voutstream utils::vout;
@@ -246,27 +250,27 @@ struct test_t : public generic_test<result_t> {
     }
 };
 
-namespace vectors{
+namespace downsets::vectors {
   template <typename T>
-  using array_backed_fixed = vectors::array_backed<T, DIMENSION>;
+  using array_backed_fixed = downsets::vectors::array_backed<T, DIMENSION>;
 
   template <typename T>
-  using array_ptr_backed_fixed = vectors::array_ptr_backed<T, DIMENSION>;
+  using array_ptr_backed_fixed = downsets::vectors::array_ptr_backed<T, DIMENSION>;
 
   template <typename T>
-  using simd_array_backed_fixed = vectors::simd_array_backed<T, DIMENSION>;
+  using simd_array_backed_fixed = downsets::vectors::simd_array_backed<T, DIMENSION>;
 
   template <typename T>
-  using simd_array_ptr_backed_fixed = vectors::simd_array_ptr_backed<T, DIMENSION>;
+  using simd_array_ptr_backed_fixed = downsets::vectors::simd_array_ptr_backed<T, DIMENSION>;
 }
 
 using vector_types = type_list<
-  vectors::array_backed_fixed<test_value_type>,
-  vectors::array_ptr_backed_fixed<test_value_type>,
-  vectors::simd_array_backed_fixed<test_value_type>,
-  vectors::simd_array_ptr_backed_fixed<test_value_type>,
-  vectors::vector_backed<test_value_type>,
-  vectors::simd_vector_backed<test_value_type>>;
+  downsets::vectors::array_backed_fixed<test_value_type>,
+  downsets::vectors::array_ptr_backed_fixed<test_value_type>,
+  downsets::vectors::simd_array_backed_fixed<test_value_type>,
+  downsets::vectors::simd_array_ptr_backed_fixed<test_value_type>,
+  downsets::vectors::vector_backed<test_value_type>,
+  downsets::vectors::simd_vector_backed<test_value_type>>;
 
 using set_types = template_type_list<
   downsets::kdtree_backed,
@@ -373,7 +377,7 @@ int main (int argc, char* argv[]) {
          | std::ranges::views::transform (to_string_view))
     for (auto& k : std::views::keys (tests)) {
       auto v = k.substr (k.find ("<"));
-      if (va == "all" or v.starts_with ("<vectors::"s + std::string (va)))
+      if (va == "all" or v.starts_with ("<downsets::vectors::"s + std::string (va)))
         if (std::ranges::find (vecs.begin (), vecs.end (), v) == vecs.end ())
           vecs.push_back (v);
     }
@@ -386,8 +390,8 @@ int main (int argc, char* argv[]) {
   std::map<std::string, result_t> all_res;
   for (auto& ds : downs)
     for (auto& v : vecs) {
-      vectors::bool_threshold = DIMENSION;
-      vectors::bitset_threshold = DIMENSION;
+      downsets::vectors::bool_threshold = DIMENSION;
+      downsets::vectors::bitset_threshold = DIMENSION;
       all_res[ds + v] = tests[ds + v] ();
     }
   for (auto& res : all_res) {

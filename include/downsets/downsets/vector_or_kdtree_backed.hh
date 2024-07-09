@@ -5,8 +5,8 @@
 #include <cmath>
 #include <vector>
 
-#include <downsets/kdtree_backed.hh>
-#include <downsets/vector_backed.hh>
+#include <downsets/downsets/kdtree_backed.hh>
+#include <downsets/downsets/vector_backed.hh>
 
 // FIXME? the theory says it should be (exp (dim) < m)
 # define KD_THRESH(M, D)  (D * 2 < M)

@@ -3,11 +3,13 @@
 #include <vector>
 #include <string>
 
-#include "utils/kdtree.hh"
-#include "vectors/vector_backed.hh"
-#include "downsets/kdtree_backed.hh"
+#include <downsets/utils/kdtree.hh>
+#include <downsets/vectors/vector_backed.hh>
+#include <downsets/downsets/kdtree_backed.hh>
 
-using SetType = downsets::kdtree_backed<vectors::vector_backed<unsigned char>>;
+namespace utils = downsets::utils;
+
+using SetType = downsets::kdtree_backed<downsets::vectors::vector_backed<unsigned char>>;
 using VType = typename SetType::value_type;
 
 std::vector<VType> vvtovv (const std::vector<std::vector<unsigned char>>& vv) {

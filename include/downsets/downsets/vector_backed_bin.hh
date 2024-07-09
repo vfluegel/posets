@@ -124,7 +124,7 @@ namespace downsets {
                 Vector&& v = x.meet (el);
                 if (v == x)
                   dominated = true;
-                TODO ("Check v == el too?  See if this is good tradeoff.");
+                // TODO ("Check v == el too?  See if this is good tradeoff.");
                 intersection.insert (std::move (v));
                 if (dominated)
                   break;

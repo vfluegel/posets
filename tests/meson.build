@@ -1,22 +1,16 @@
-vectors_dep = dependency ('vectors')
-
 tests_exe = executable ('tests', 'tests.cc',
-                        include_directories : inc,
-                        dependencies : [vectors_dep, boost_dep, stdsimd_dep],
+                        dependencies : [downsets_dep ],
                         c_args : '-O0' )  # Deactivate optimization, otherwise it takes ages.
 
 kdtests_exe = executable ('kdtests', 'kdtree_backed.cc',
-                          include_directories : inc,
-                          dependencies : [vectors_dep, boost_dep, stdsimd_dep])
+                          dependencies : [downsets_dep ])
 
 
 simdbm_exe = executable ('simd-bm', 'simd-bm.cc',
-                         include_directories : inc,
-                         dependencies : [vectors_dep, boost_dep, stdsimd_dep])
+                         dependencies : [downsets_dep ])
 
 downsetbm_exe = executable ('downset-bm', 'downset-bm.cc',
-                            include_directories : inc,
-                            dependencies : [vectors_dep, boost_dep, stdsimd_dep])
+                            dependencies : [downsets_dep ])
 
 test('antichains/vectors random', downsetbm_exe,
      args : ['-p', 'build-query=0,intersection=52,union=0', 'vec,kd',
