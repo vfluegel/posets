@@ -69,6 +69,7 @@ struct test_t : public generic_test<void> {
         e1.emplace_back(v1.copy ());
         e1.emplace_back(v1.copy ());
         SetType set = vec_to_set (std::move (e1));
+        assert (set.size () == 1);
         assert (set.contains (v1));
         assert (set.contains (v4));
         assert (not set.contains (v2));
@@ -94,7 +95,7 @@ struct test_t : public generic_test<void> {
         std::vector<VType> e2;
         e2.emplace_back(v4.copy ());
         set.intersect_with (vec_to_set (std::move (e2)));
-        assert (set.contains (v1));
+        assert (not set.contains (v1));
         assert (set.contains (v4));
         assert (not set.contains (v2));
         assert (not set.contains (v3));

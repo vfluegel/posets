@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cmath>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include <posets/utils/kdtree.hh>
@@ -39,18 +40,18 @@ namespace posets::downsets {
         assert (elements.size() > 0);
         std::vector<Vector> antichain;
         antichain.reserve (this->size ());
+        std::set<Vector> a_set;
 
         // for all elements in this tree, if they are not strictly
         // dominated by the tree, we keep them
-        bool removed = false;
         for (auto& e : tree)
-          if (this->tree.dominates (e, true))
-            removed = true;
-          else
-            antichain.push_back(e.copy ()); // this does requires a copy
+          if (!this->tree.dominates (e, true))
+            a_set.insert(e.copy ()); // this does requires a copy
 
-        if (removed) {
-          assert (antichain.size () > 0);
+        if (a_set.size () < this->size ()) {
+          assert (a_set.size () > 0);
+          for (auto it = a_set.begin (); it != a_set.end ();)
+            antichain.push_back (std::move (a_set.extract (it++).value ()));
           this->tree = utils::kdtree<Vector> (std::move (antichain));
         }
 
