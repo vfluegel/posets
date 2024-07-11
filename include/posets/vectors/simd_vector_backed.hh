@@ -4,8 +4,8 @@
 #include <iostream>
 #include <span>
 
-#include <downsets/vectors/simd_po_res.hh>
-#include <downsets/utils/simd_traits.hh>
+#include <posets/vectors/simd_po_res.hh>
+#include <posets/utils/simd_traits.hh>
 
 
 namespace posets::vectors {

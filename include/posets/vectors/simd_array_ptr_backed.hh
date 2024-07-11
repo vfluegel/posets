@@ -6,7 +6,7 @@
 
 #include <boost/pool/object_pool.hpp>
 
-#include <downsets/utils/simd_traits.hh>
+#include <posets/utils/simd_traits.hh>
 
 namespace posets::vectors {
   template <typename T, size_t nsimds>

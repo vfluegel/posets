@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-#include <downsets/utils/kdtree.hh>
+#include <posets/utils/kdtree.hh>
 
 namespace posets::downsets {
   // Forward definition for the operator<<s.

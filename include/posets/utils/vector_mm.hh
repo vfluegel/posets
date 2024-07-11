@@ -4,7 +4,7 @@
 
 #include <vector>
 #include <boost/align/aligned_allocator.hpp>
-#include <downsets/utils/simd_traits.hh>
+#include <posets/utils/simd_traits.hh>
 
 namespace posets::utils {
   template <typename T>

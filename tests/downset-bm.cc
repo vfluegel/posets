@@ -26,9 +26,9 @@
 #undef NO_VERBOSE
 #include "verbose.hh"
 
-#include <downsets/utils/vector_mm.hh>
-#include <downsets/downsets.hh>
-#include <downsets/vectors.hh>
+#include <posets/utils/vector_mm.hh>
+#include <posets/downsets.hh>
+#include <posets/vectors.hh>
 
 #include "test_maker.hh"
 

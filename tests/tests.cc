@@ -10,8 +10,8 @@
 
 #include "test_maker.hh"
 
-#include <downsets/downsets.hh>
-#include <downsets/vectors.hh>
+#include <posets/downsets.hh>
+#include <posets/vectors.hh>
 
 size_t posets::vectors::bool_threshold = 128;
 size_t posets::vectors::bitset_threshold = 128;

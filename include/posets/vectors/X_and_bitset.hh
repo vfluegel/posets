@@ -1,8 +1,8 @@
 #pragma once
 #include <bitset>
 
-#include <downsets/vectors/traits.hh>
-#include <downsets/utils/vector_mm.hh>
+#include <posets/vectors/traits.hh>
+#include <posets/utils/vector_mm.hh>
 
 namespace posets::vectors {
 

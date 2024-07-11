@@ -6,7 +6,7 @@
 #include <iostream>
 #include <cassert>
 
-#include <downsets/utils/vector_mm.hh>
+#include <posets/utils/vector_mm.hh>
 
 namespace posets::downsets {
   template <typename Vector>
