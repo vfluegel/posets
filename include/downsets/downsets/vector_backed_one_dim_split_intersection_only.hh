@@ -141,9 +141,9 @@ namespace downsets {
             return not dominated;
           };
 
-          std::all_of (cv.first.begin (), cv.first.end (), meet);
+          static_cast<void> (std::all_of (cv.first.begin (), cv.first.end (), meet));
           if (!dominated)
-            std::all_of (cv.second.begin (), cv.second.end (), meet);
+            static_cast<void> (std::all_of (cv.second.begin (), cv.second.end (), meet));
 
           // If x wasn't <= an element in other, then x is not in the
           // intersection, thus the set is updated.

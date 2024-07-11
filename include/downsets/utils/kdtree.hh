@@ -79,7 +79,7 @@ namespace downsets::utils {
                        size_t length, size_t axis) {
         assert (static_cast<size_t>(std::distance (begin_it, end_it)) == length);
         assert (length > 0);
-        assert (axis < this->dim && axis >= 0);
+        assert (axis < this->dim);
 
         // if the list of elements is now a singleton, we make a leaf
         if (length == 1)
