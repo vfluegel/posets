@@ -1,16 +1,16 @@
 tests_exe = executable ('tests', 'tests.cc',
-                        dependencies : [downsets_dep ],
+                        dependencies : [posets_dep ],
                         c_args : '-O0' )  # Deactivate optimization, otherwise it takes ages.
 
 kdtests_exe = executable ('kdtests', 'kdtree_backed.cc',
-                          dependencies : [downsets_dep ])
+                          dependencies : [posets_dep ])
 
 
 simdbm_exe = executable ('simd-bm', 'simd-bm.cc',
-                         dependencies : [downsets_dep ])
+                         dependencies : [posets_dep ])
 
 downsetbm_exe = executable ('downset-bm', 'downset-bm.cc',
-                            dependencies : [downsets_dep ])
+                            dependencies : [posets_dep ])
 
 test('antichains/vectors random', downsetbm_exe,
      args : ['-p', 'build-query=0,intersection=52,union=0', 'vec,kd',

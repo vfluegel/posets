@@ -1,23 +1,17 @@
 #pragma once
-
-#include <cstring>
 #include <cassert>
 #include <experimental/simd>
 #include <iostream>
+#include <span>
 
-#include <downsets/vectors/simd_po_res.hh>
-#include <downsets/utils/simd_traits.hh>
+#include <posets/vectors/simd_po_res.hh>
+#include <posets/utils/simd_traits.hh>
 
-namespace downsets::vectors {
-  template <typename T, size_t nsimds>
-  class simd_array_backed_sum_;
 
-  template <typename T, size_t K>
-  using simd_array_backed_sum = simd_array_backed_sum_<T, utils::simd_traits<T>::nsimds (K)>;
-
-  template <typename T, size_t nsimds>
-  class simd_array_backed_sum_ {
-      using self = simd_array_backed_sum_<T, nsimds>;
+namespace posets::vectors {
+  template <typename T>
+  class simd_vector_backed {
+      using self = simd_vector_backed<T>;
       using traits = utils::simd_traits<T>;
       static const auto simd_size = traits::simd_size;
 
@@ -25,10 +19,14 @@ namespace downsets::vectors {
       using value_type = T;
 
     private:
-      simd_array_backed_sum_ (size_t k) : k {k}, sum {0} { }
-
+      simd_vector_backed (size_t k) : k {k},
+                                      nsimds {traits::nsimds (k)},
+                                      data (nsimds) {
+        assert (nsimds >= 1);
+        data.back () ^= data.back ();
+      }
     public:
-      simd_array_backed_sum_ (std::span<const T> v) : k {v.size ()} {
+      simd_vector_backed (std::span<const T> v) : simd_vector_backed (v.size ()) {
         sum = 0;
         for (auto&& c : v)
           sum += c;
@@ -37,19 +35,20 @@ namespace downsets::vectors {
         std::memcpy ((char*) data.data (), (char*) v.data (), v.size ());
       }
 
-      simd_array_backed_sum_ () = delete;
-      simd_array_backed_sum_ (const self& other) = delete;
-      simd_array_backed_sum_ (self&& other) = default;
 
-      // explicit copy operator
-      simd_array_backed_sum_ copy () const {
-        auto res = simd_array_backed_sum_ (k);
+      simd_vector_backed () = delete;
+      simd_vector_backed (const self& other) = delete;
+      simd_vector_backed (self&& other) = default;
+
+      self copy () const {
+        auto res = self (k);
         res.data = data;
         res.sum = sum;
         return res;
       }
 
       self& operator= (self&& other) {
+        assert (other.k == k and other.nsimds == nsimds);
         data = std::move (other.data);
         sum = other.sum;
         return *this;
@@ -58,16 +57,29 @@ namespace downsets::vectors {
       self& operator= (const self& other) = delete;
 
       static constexpr size_t capacity_for (size_t elts) {
-        return nsimds * simd_size;
+        return traits::capacity_for (elts);
       }
 
-      void to_vector (std::span<char> v) const {
+      void to_vector (std::span<T> v) const {
         memcpy ((char*) v.data (), (char*) data.data (), data.size () * simd_size);
       }
 
-
       inline auto partial_order (const self& rhs) const {
         return simd_po_res (*this, rhs);
+      }
+
+      bool operator== (const self& rhs) const {
+        if (sum != rhs.sum)
+          return false;
+        // Trust memcmp to DTRT
+        return std::memcmp ((char*) rhs.data.data (), (char*) data.data (), nsimds * simd_size) == 0;
+      }
+
+      bool operator!= (const self& rhs) const {
+        if (sum != rhs.sum)
+          return true;
+        // Trust memcmp to DTRT
+        return std::memcmp ((char*) rhs.data.data (), (char*) data.data (), nsimds * simd_size) != 0;
       }
 
       // Used by Sets, should be a total order.  Do not use.
@@ -84,19 +96,14 @@ namespace downsets::vectors {
         return false;
       }
 
-      bool operator== (const self& rhs) const {
-        if (sum != rhs.sum)
-          return false;
-        // Trust memcmp to DTRT
-        return std::memcmp ((char*) rhs.data.data (), (char*) data.data (), nsimds * simd_size) == 0;
+      T operator[] (size_t i) const {
+        return data[i / simd_size][i % simd_size];
       }
 
-      bool operator!= (const self& rhs) const {
-        if (sum != rhs.sum)
-          return true;
-        // Trust memcmp to DTRT
-        return std::memcmp ((char*) rhs.data.data (), (char*) data.data (), nsimds * simd_size) != 0;
+      typename traits::fssimd::reference operator[] (size_t i) {
+        return data[i / simd_size][i % simd_size];
       }
+
 
       self meet (const self& rhs) const {
         auto res = self (k);
@@ -117,43 +124,31 @@ namespace downsets::vectors {
         return k;
       }
 
-      auto& print (std::ostream& os) const
-      {
-        os << "{ ";
-        for (size_t i = 0; i < k; ++i)
-          os << (int) (*this)[i] << " ";
-        os << "}";
-        return os;
-      }
-
-      // Should be used sparingly.
-      int operator[] (size_t i) const {
-        return data[i / simd_size][i % simd_size];
-      }
-
       auto bin () const {
         return (sum + k) / k;
       }
 
     private:
       friend simd_po_res<self>;
-      std::array<typename traits::fssimd, nsimds> data;
-      const size_t k;
+      const size_t k, nsimds;
+      std::vector<typename traits::fssimd> data;
       int sum = 0;
   };
 
   template <typename T>
-  struct traits<simd_array_backed_sum, T> {
+  struct traits<simd_vector_backed, T> {
       static constexpr auto capacity_for (size_t elts) {
         return utils::simd_traits<T>::capacity_for (elts);
       }
   };
-
-  template <typename T, size_t nsimds>
-  inline
-  std::ostream& operator<<(std::ostream& os, const vectors::simd_array_backed_sum_<T, nsimds>& v)
-  {
-    return v.print (os);
-  }
+template <typename T>
+inline
+std::ostream& operator<<(std::ostream& os, const vectors::simd_vector_backed<T>& v)
+{
+  os << "{ ";
+  for (size_t i = 0; i < v.size (); ++i)
+    os << (int) v[i] << " ";
+  os << "}";
+  return os;
 }
-
+}

@@ -5,8 +5,8 @@
 #include <cmath>
 #include <vector>
 
-#include <downsets/downsets/kdtree_backed.hh>
-#include <downsets/downsets/vector_backed.hh>
+#include <posets/downsets/kdtree_backed.hh>
+#include <posets/downsets/vector_backed.hh>
 
 // FIXME? the theory says it should be (exp (dim) < m)
 # define KD_THRESH(M, D)  (D * 2 < M)
@@ -19,7 +19,7 @@
 # define data_do(x...)
 #endif
 
-namespace downsets {
+namespace posets::downsets {
   // Forward definition for the operator<<s.
   template <typename>
   class vector_or_kdtree_backed;

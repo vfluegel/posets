@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 
-namespace downsets::utils {
+namespace posets::utils {
   // https://stackoverflow.com/questions/37490881/overloading-operator-in-c-with-a-prefix
   class prefixstringbuf : public std::stringbuf {
     private:
@@ -64,7 +64,7 @@ namespace downsets::utils {
 
 #ifndef NO_VERBOSE
 # define verb_do(level, acts...) do { \
-    using namespace downsets::utils;  \
+    using namespace posets::utils;  \
     if (verbose >= level) {          \
       acts;                          \
     }                                \

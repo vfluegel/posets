@@ -1,10 +1,10 @@
 #pragma once
 #include <bitset>
 
-#include <downsets/vectors/traits.hh>
-#include <downsets/utils/vector_mm.hh>
+#include <posets/vectors/traits.hh>
+#include <posets/utils/vector_mm.hh>
 
-namespace downsets::vectors {
+namespace posets::vectors {
 
   static constexpr size_t nbools_to_nbitsets (size_t nbools) {
     return (nbools + sizeof (unsigned long) * 8 - 1) / (sizeof (unsigned long) * 8);
@@ -36,7 +36,7 @@ namespace downsets::vectors {
       }
 
       X_and_bitset (std::initializer_list<value_type> v) :
-        X_and_bitset (downsets::utils::vector_mm<value_type> (v)) {}
+        X_and_bitset (posets::utils::vector_mm<value_type> (v)) {}
 
       size_t size () const { return k; }
 

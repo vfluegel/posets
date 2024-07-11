@@ -8,7 +8,7 @@
 #include <list>
 #include <functional>
 
-namespace downsets {
+namespace posets::downsets {
   template <typename Vector>
   class full_set {
     public:

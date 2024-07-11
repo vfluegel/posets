@@ -4,9 +4,9 @@
 
 #include <vector>
 #include <boost/align/aligned_allocator.hpp>
-#include <downsets/utils/simd_traits.hh>
+#include <posets/utils/simd_traits.hh>
 
-namespace downsets::utils {
+namespace posets::utils {
   template <typename T>
   using vector_mm = std::vector<T, boost::alignment::aligned_allocator<T, simd_traits<T>::alignment ()>>;
 }

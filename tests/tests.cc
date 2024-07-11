@@ -10,11 +10,11 @@
 
 #include "test_maker.hh"
 
-#include <downsets/downsets.hh>
-#include <downsets/vectors.hh>
+#include <posets/downsets.hh>
+#include <posets/vectors.hh>
 
-size_t downsets::vectors::bool_threshold = 128;
-size_t downsets::vectors::bitset_threshold = 128;
+size_t posets::vectors::bool_threshold = 128;
+size_t posets::vectors::bitset_threshold = 128;
 
 template<class T, class = void>
 struct has_insert : std::false_type {};
@@ -195,7 +195,7 @@ struct test_t : public generic_test<void> {
 
 
       // Full set is so slow, this will never finish.
-      if constexpr (std::is_same<SetType, downsets::full_set<VType>>::value)
+      if constexpr (std::is_same<SetType, posets::downsets::full_set<VType>>::value)
         return;
 
 
@@ -251,37 +251,37 @@ void usage (const char* progname) {
   exit (0);
 }
 
-namespace downsets::vectors {
+namespace posets::vectors {
   template <typename T>
-  using simd_array_backed_sum_fixed = downsets::vectors::simd_array_backed_sum<T, 10>;
+  using simd_array_backed_sum_fixed = posets::vectors::simd_array_backed_sum<T, 10>;
 
   template <typename T>
-  using simd_array_backed_fixed = downsets::vectors::simd_array_backed<T, 10>;
+  using simd_array_backed_fixed = posets::vectors::simd_array_backed<T, 10>;
 
   template <typename T>
-  using array_backed_fixed = downsets::vectors::array_backed<T, 10>;
+  using array_backed_fixed = posets::vectors::array_backed<T, 10>;
 
   template <typename T>
-  using array_backed_sum_fixed = downsets::vectors::array_backed_sum<T, 10>;
+  using array_backed_sum_fixed = posets::vectors::array_backed_sum<T, 10>;
 
 }
 
-using vector_types = type_list<downsets::vectors::vector_backed<char>,
-                               downsets::vectors::array_backed_fixed<char>,
-                               downsets::vectors::array_backed_sum_fixed<char>,
-                               downsets::vectors::simd_vector_backed<char>,
-                               downsets::vectors::simd_array_backed_fixed<char>,
-                               downsets::vectors::simd_array_backed_sum_fixed<char>,
-                               downsets::vectors::X_and_bitset<downsets::vectors::simd_vector_backed<char>, 1>>;
+using vector_types = type_list<posets::vectors::vector_backed<char>,
+                               posets::vectors::array_backed_fixed<char>,
+                               posets::vectors::array_backed_sum_fixed<char>,
+                               posets::vectors::simd_vector_backed<char>,
+                               posets::vectors::simd_array_backed_fixed<char>,
+                               posets::vectors::simd_array_backed_sum_fixed<char>,
+                               posets::vectors::X_and_bitset<posets::vectors::simd_vector_backed<char>, 1>>;
 
-using set_types = template_type_list<//downsets::full_set, ; too slow.
-  downsets::kdtree_backed,
-  downsets::vector_or_kdtree_backed,
-  downsets::set_backed,
-  downsets::vector_backed,
-  downsets::vector_backed_bin,
-  downsets::vector_backed_one_dim_split,
-  downsets::vector_backed_one_dim_split_intersection_only>;
+using set_types = template_type_list<//posets::downsets::full_set, ; too slow.
+  posets::downsets::kdtree_backed,
+  posets::downsets::vector_or_kdtree_backed,
+  posets::downsets::set_backed,
+  posets::downsets::vector_backed,
+  posets::downsets::vector_backed_bin,
+  posets::downsets::vector_backed_one_dim_split,
+  posets::downsets::vector_backed_one_dim_split_intersection_only>;
 
 
 
@@ -291,12 +291,12 @@ int main(int argc, char* argv[]) {
   if (argc != 3)
     usage (argv[0]);
 
-  auto implem = std::string ("downsets::") + argv[1]
-    + "<downsets::vectors::" + argv[2] + (argv[2][strlen (argv[2]) - 1] == '>' ? " " : "") + ">";
+  auto implem = std::string ("posets::downsets::") + argv[1]
+    + "<posets::vectors::" + argv[2] + (argv[2][strlen (argv[2]) - 1] == '>' ? " " : "") + ">";
 
   try {
-    downsets::vectors::bool_threshold = 128;
-    downsets::vectors::bitset_threshold = 128;
+    posets::vectors::bool_threshold = 128;
+    posets::vectors::bitset_threshold = 128;
     auto& tests = test_list<void>::list;
     tests[implem] ();
     return 0;

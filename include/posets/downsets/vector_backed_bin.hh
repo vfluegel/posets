@@ -8,31 +8,36 @@
 #include <sstream>
 #include <cstdlib>
 
-namespace downsets {
+namespace posets::downsets {
   template <typename Vector>
-  class vector_backed_one_dim_split {
+  class vector_backed_bin {
     public:
       typedef Vector value_type;
 
-      vector_backed_one_dim_split (Vector&& v) {
+      vector_backed_bin (Vector&& v) {
+        vector_set.resize (v.size ());
         insert (std::move (v));
       }
 
-      vector_backed_one_dim_split (std::vector<Vector>&& elements) noexcept {
+      vector_backed_bin (std::vector<Vector>&& elements) noexcept {
         assert (elements.size() > 0);
+        vector_set.resize (elements[0].size ());
         for (auto&& e : elements)
           insert (std::move (e));
       }
+      
     private:
-      vector_backed_one_dim_split () = default;
+      vector_backed_bin (size_t starting_vector_set_size) {
+        vector_set.resize (starting_vector_set_size);
+      }
 
     public:
-      vector_backed_one_dim_split (const vector_backed_one_dim_split&) = delete;
-      vector_backed_one_dim_split (vector_backed_one_dim_split&&) = default;
-      vector_backed_one_dim_split& operator= (vector_backed_one_dim_split&&) = default;
-      vector_backed_one_dim_split& operator= (const vector_backed_one_dim_split&) = delete;
+      vector_backed_bin (const vector_backed_bin&) = delete;
+      vector_backed_bin (vector_backed_bin&&) = default;
+      vector_backed_bin& operator= (vector_backed_bin&&) = default;
+      vector_backed_bin& operator= (const vector_backed_bin&) = delete;
 
-      bool operator== (const vector_backed_one_dim_split& other) = delete;
+      bool operator== (const vector_backed_bin& other) = delete;
 
       bool contains (const Vector& v) const {
         size_t bin = bin_of (v);
@@ -50,94 +55,62 @@ namespace downsets {
         return _size;
       }
 
-      inline bool insert (Vector&& v) {
+      inline bool insert (Vector&& v, bool antichain = true) {
+        size_t bin = bin_of (v);
 
-        if (vector_set.empty ()) {
-          // Search for a dimension in ]0, max[.
-          /*int cur_max = -1;
-           size_t max_pos = 0, lessthanmax_pos = 0;
-           for (size_t i = 0; i < v.size (); ++i) {
-           auto vi = v[i];
-           if (vi > cur_max) {
-           lessthanmax_pos = max_pos;
-           cur_max = vi;
-           max_pos = i;
-           }
-           }
-           if (cur_max == 0)
-           std::cout << "Got a zero vector." << std::endl;
-           split_dim = lessthanmax_pos;
-           */
-          // for (int max_guesses = v.size (); max_guesses; --max_guesses) {
-          //   split_dim = rand () % v.size ();
-          //   if (v[split_dim] > 0)
-          //     break;
-          // }
-          split_dim = 0;
+        if (antichain) {
+          auto start = std::min (bin, vector_set.size () - 1);
+          [[maybe_unused]] bool must_remove = false;
 
-          size_t bin = bin_of (v);
-          vector_set.resize (bin + 1);
-          vector_set[bin].push_back (std::move (v));
-          ++_size;
-          return true;
+          size_t i = start;
+          do {
+            // This is like remove_if, but allows breaking.
+            auto result = vector_set[i].begin ();
+            auto end = vector_set[i].end ();
+
+            for (auto it = result; it != end; ++it) {
+              auto res = v.partial_order (*it);
+              if (not must_remove and res.leq ()) { // v is dominated.
+                // if must_remove is true, since we started with an antichain,
+                // it's not possible that res.leq () holds.  Hence we don't check for
+                // leq if must_remove is true.
+                return false;
+              } else if (res.geq ()) { // v dominates *it
+                must_remove = true; /* *it should be removed */
+              } else { // *it needs to be kept
+                if (result != it) // This can be false only on the first element.
+                  *result = std::move (*it);
+                ++result;
+              }
+            }
+
+            if (result != vector_set[i].end ()) {
+              _size -= vector_set[i].end () - result;
+              vector_set[i].erase (result, vector_set[i].end ());
+            }
+
+            i = (i + 1) % vector_set.size ();
+          } while (i != start);
         }
 
-        size_t bin = bin_of (v);
-        auto start = std::min (bin, vector_set.size () - 1);
-        [[maybe_unused]] bool must_remove = false;
-
-        size_t i = start;
-        do {
-          // This is like remove_if, but allows breaking.
-          auto result = vector_set[i].begin ();
-          auto end = vector_set[i].end ();
-
-          for (auto it = result; it != end; ++it) {
-            auto res = v.partial_order (*it);
-            if (not must_remove and res.leq ()) { // v is dominated.
-              // if must_remove is true, since we started with an antichain,
-              // it's not possible that res.leq () holds.  Hence we don't check for
-              // leq if must_remove is true.
-              return false;
-            } else if (res.geq ()) { // v dominates *it
-              must_remove = true; /* *it should be removed */
-            } else { // *it needs to be kept
-              if (result != it) // This can be false only on the first element.
-                *result = std::move (*it);
-              ++result;
-            }
-          }
-
-          if (result != vector_set[i].end ()) {
-            _size -= vector_set[i].end () - result;
-            vector_set[i].erase (result, vector_set[i].end ());
-          }
-
-          i = (i == vector_set.size () - 1) ? 0 : i + 1;
-          // i = (i + 1) % vector_set.size ();
-        } while (i != start);
-
-        if (bin >= vector_set.size ())
+        if (bin >= vector_set.size ()) {
           vector_set.resize (bin + 1);
+        }
         vector_set[bin].push_back (std::move (v));
         ++_size;
         return true;
       }
 
-      bool empty () {
-        return vector_set.empty ();
-      }
-
-      void union_with (vector_backed_one_dim_split&& other) {
+      void union_with (vector_backed_bin&& other) {
         for (auto&& evec : other.vector_set)
           for (auto&& e : evec)
             insert (std::move (e));
       }
 
-      void intersect_with (vector_backed_one_dim_split&& other) {
+      void intersect_with (vector_backed_bin&& other) {
         if (vector_set.empty ())
           return;
-        vector_backed_one_dim_split intersection;
+        vector_backed_bin intersection (vector_set.size ());
 
         size_t bin = vector_set.size () / 2;
 
@@ -151,7 +124,7 @@ namespace downsets {
                 Vector&& v = x.meet (el);
                 if (v == x)
                   dominated = true;
-                // TODO ("See if checking v == el is a good idea.");
+                // TODO ("Check v == el too?  See if this is good tradeoff.");
                 intersection.insert (std::move (v));
                 if (dominated)
                   break;
@@ -169,7 +142,7 @@ namespace downsets {
                 if (v == *it) {
                   intersection.insert (std::move (v));
                   if (it != other.vector_set[i].end () - 1)
-                    std::swap(*it, other.vector_set[i].back());
+                    std::swap (*it, other.vector_set[i].back());
                   other.vector_set[i].pop_back ();
                 }
                 else {
@@ -185,14 +158,19 @@ namespace downsets {
         *this = std::move (intersection);
       }
 
-      // TODO ("See if it's better to temporarily have "
-      //        "something that ain't an Antichain.");
       template <typename F>
-      vector_backed_one_dim_split apply (const F& lambda) const {
-        vector_backed_one_dim_split res;
-        for (const auto& elvec : vector_set)
-          for (auto&& el : elvec)
+      vector_backed_bin apply (const F& lambda) const {
+        vector_backed_bin res (vector_set.size ());
+        for (auto& elvec : vector_set)
+          for (auto& el : elvec) {
+            /* Insert without preserving antichain:
+                auto el_mod = lambda (el);
+                res.vector_set[bin_of (el_mod)].push_back (std::move (el_mod));
+               This seems to perform worse than what I have here.
+             */
             res.insert (lambda (el));
+          }
+
         return res;
       }
 
@@ -254,9 +232,10 @@ namespace downsets {
             stabilize ();
           }
 
-          auto operator++ () {
+          auto& operator++ () {
             ++sub_it;
             stabilize ();
+            return *this;
           }
 
           bool operator!= (const iterator& other) const {
@@ -282,26 +261,32 @@ namespace downsets {
           decltype (T ()->begin ()) sub_it, sub_end;
       };
 
-      const auto  begin() const { return iterator (vector_set.crbegin (), vector_set.crend ()); }
-      const auto  end() const   { return iterator (vector_set.crend (), vector_set.crend ()); }
+      const auto begin() const {
+        // Making the type explicit for clang.
+        return iterator<decltype (vector_set.crbegin ())>  (vector_set.crbegin (), vector_set.crend ());
+      }
+
+      const auto end() const {
+        // Making the type explicit for clang.
+        return iterator<decltype (vector_set.crbegin ())> (vector_set.crend (), vector_set.crend ());
+      }
 
     private:
       using vector_set_t = std::vector<std::vector<Vector>>;
-      vector_set_t vector_set; // [n] -> all the vectors with v[split_dim] = n
+      vector_set_t vector_set; // [n] -> all the vectors with v.bin() = n
       size_t _size = 0;
-      size_t split_dim = 0;
 
       // Surely: if bin_of (u) > bin_of (v), then v can't dominate u.
       size_t bin_of (const Vector& v) const {
-        assert (split_dim < v.size ());
-        return (size_t) (((ssize_t) v[split_dim]) + 1);
+        if constexpr (vectors::has_bin<Vector>::value)
+          return v.bin ();
+        return 0;
       }
   };
 
   template <typename Vector>
   inline
-  std::ostream& operator<<(std::ostream& os,
-                           const vector_backed_one_dim_split<Vector>& f)
+  std::ostream& operator<<(std::ostream& os, const vector_backed_bin<Vector>& f)
   {
     for (auto&& el : f)
       os << el << std::endl;

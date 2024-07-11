@@ -1,5 +1,5 @@
 #pragma once
-namespace downsets::vectors {
+namespace posets::vectors {
   template <typename Vec>
   class simd_po_res_sum {
     public:

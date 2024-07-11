@@ -1,6 +1,6 @@
 #pragma once
 
-namespace downsets::utils {
+namespace posets::utils {
  template <typename T>
   struct ref_ptr_cmp {
       constexpr bool operator() (const std::reference_wrapper<T>& lhs,
