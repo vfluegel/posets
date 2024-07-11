@@ -85,6 +85,7 @@ struct test_t : public generic_test<void> {
       assert (not set_one_elt.contains (v3));
 
       // simple intersect
+      std::cout << "Simple intersection test" << std::endl;
       {
         std::vector<VType> e1;
         e1.emplace_back(v1.copy ());
