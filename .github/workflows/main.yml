@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: debian:sid
+    steps:
+    - name: Install packages
+      run: |
+        apt-get -y update
+        apt-get -y install zsh git gcc meson ninja-build libboost-dev
+    - name: Checkout repository and submodules
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Compile all configurations
+      run: |
+        meson setup build --buildtype debug
+    - name: Run test
+      run: |
+        cd build && meson test
