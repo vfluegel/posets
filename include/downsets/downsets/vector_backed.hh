@@ -5,7 +5,7 @@
 #include <iostream>
 #include <cassert>
 
-namespace downsets {
+namespace posets::downsets {
   // A forward definition to allow for friend status
   template <typename Vector>
   class vector_or_kdtree_backed;

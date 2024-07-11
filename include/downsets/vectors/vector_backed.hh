@@ -1,7 +1,7 @@
 #pragma once
 #include <span>
 
-namespace downsets::vectors {
+namespace posets::vectors {
 
   template <typename T>
   class vector_backed : public std::vector<T> {

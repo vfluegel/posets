@@ -1,6 +1,6 @@
 #pragma once
 
-namespace downsets::vectors {
+namespace posets::vectors {
   // This is the position at and after which all state counters are boolean.
   // Set to the vector size to disable this.
   extern size_t bool_threshold;

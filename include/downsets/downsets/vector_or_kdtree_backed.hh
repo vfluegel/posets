@@ -19,7 +19,7 @@
 # define data_do(x...)
 #endif
 
-namespace downsets {
+namespace posets::downsets {
   // Forward definition for the operator<<s.
   template <typename>
   class vector_or_kdtree_backed;

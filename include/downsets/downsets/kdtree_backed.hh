@@ -8,7 +8,7 @@
 
 #include <downsets/utils/kdtree.hh>
 
-namespace downsets {
+namespace posets::downsets {
   // Forward definition for the operator<<s.
   template <typename>
   class kdtree_backed;

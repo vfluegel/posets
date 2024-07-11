@@ -4,7 +4,7 @@
 #include <iostream>
 #include <span>
 
-namespace downsets::vectors {
+namespace posets::vectors {
   // What's the multiple of T's we store.  This is used to speed up compilation
   // and reduce program size.
 #define T_PER_UNIT 8

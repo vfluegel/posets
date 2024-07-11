@@ -8,7 +8,7 @@
 #include <sstream>
 #include <cstdlib>
 
-namespace downsets {
+namespace posets::downsets {
   template <typename Vector>
   class vector_backed_one_dim_split {
     public:

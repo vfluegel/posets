@@ -32,11 +32,11 @@ static std::set<std::string> set_names, vector_names;
 #define typestring(T)                                                   \
   ([] () { int _; return abi::__cxa_demangle (typeid(T).name (), 0, 0, &_); }) ()
 
-namespace downsets {
+namespace posets::downsets {
   template <typename VecType>
   struct all {};
 }
-namespace downsets::vectors {
+namespace posets::vectors {
   struct all {};
 }
 
@@ -66,9 +66,9 @@ void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
 
   if constexpr (CreateAll) {
     for (auto&& ts : {
-        typestring (downsets::all<VecType>),
-        typestring (SetType<downsets::vectors::all>),
-        typestring (downsets::all<downsets::vectors::all>)
+        typestring (posets::downsets::all<VecType>),
+        typestring (SetType<posets::vectors::all>),
+        typestring (posets::downsets::all<posets::vectors::all>)
       }) {
       auto prev = tests[ts];
       tests[ts] = [prev, test] () {

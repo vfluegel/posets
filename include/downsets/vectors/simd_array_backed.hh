@@ -6,7 +6,7 @@
 
 #include <downsets/utils/simd_traits.hh>
 
-namespace downsets::vectors {
+namespace posets::vectors {
   template <typename T, size_t nsimds>
   class simd_array_backed_;
 

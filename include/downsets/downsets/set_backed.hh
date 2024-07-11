@@ -7,7 +7,7 @@
 #include <cassert>
 #include <downsets/utils/ref_ptr_cmp.hh>
 
-namespace downsets {
+namespace posets::downsets {
   template <typename Vector>
   class set_backed {
     public:

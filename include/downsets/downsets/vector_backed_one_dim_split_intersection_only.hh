@@ -8,7 +8,7 @@
 
 #include <downsets/utils/vector_mm.hh>
 
-namespace downsets {
+namespace posets::downsets {
   template <typename Vector>
   class vector_backed_one_dim_split_intersection_only {
       using self = vector_backed_one_dim_split_intersection_only;
