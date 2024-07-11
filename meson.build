@@ -1,4 +1,4 @@
-project ('Downset Library', ['cpp'],
+project ('Posets Library', ['cpp'],
          default_options : ['cpp_std=c++20', 'b_ndebug=if-release'],
          license : 'GPL-3.0')
 
