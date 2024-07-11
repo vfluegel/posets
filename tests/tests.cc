@@ -64,6 +64,17 @@ struct test_t : public generic_test<void> {
       assert (not set_one_elt.contains (v2));
       assert (not set_one_elt.contains (v3));
 
+      {
+        std::vector<VType> e1;
+        e1.emplace_back(v1.copy ());
+        e1.emplace_back(v1.copy ());
+        SetType set = vec_to_set (std::move (e1));
+        assert (set.contains (v1));
+        assert (set.contains (v4));
+        assert (not set.contains (v2));
+        assert (not set.contains (v3));
+      }
+
       // singleton union test
       std::cout << "Singleton union test" << std::endl;
       SetType set_one_elt_cpy (v1.copy ());
@@ -72,6 +83,21 @@ struct test_t : public generic_test<void> {
       assert (set_one_elt.contains (v4));
       assert (not set_one_elt.contains (v2));
       assert (not set_one_elt.contains (v3));
+
+      // simple intersect
+      {
+        std::vector<VType> e1;
+        e1.emplace_back(v1.copy ());
+        e1.emplace_back(v1.copy ());
+        SetType set = vec_to_set (std::move (e1));
+        std::vector<VType> e2;
+        e2.emplace_back(v4.copy ());
+        set.intersect_with (vec_to_set (std::move (e2)));
+        assert (set.contains (v1));
+        assert (set.contains (v4));
+        assert (not set.contains (v2));
+        assert (not set.contains (v3));
+      }
 
       // appply test
       std::cout << "Apply test" << std::endl;
@@ -169,7 +195,7 @@ struct test_t : public generic_test<void> {
 
       // Full set is so slow, this will never finish.
       if constexpr (std::is_same<SetType, downsets::full_set<VType>>::value)
-                     return;
+        return;
 
 
       auto F1i = vec_to_set (vvtovv ({
@@ -248,13 +274,13 @@ using vector_types = type_list<downsets::vectors::vector_backed<char>,
                                downsets::vectors::X_and_bitset<downsets::vectors::simd_vector_backed<char>, 1>>;
 
 using set_types = template_type_list<//downsets::full_set, ; too slow.
-                                     downsets::kdtree_backed,
-                                     downsets::vector_or_kdtree_backed,
-                                     downsets::set_backed,
-                                     downsets::vector_backed,
-                                     downsets::vector_backed_bin,
-                                     downsets::vector_backed_one_dim_split,
-                                     downsets::vector_backed_one_dim_split_intersection_only>;
+  downsets::kdtree_backed,
+  downsets::vector_or_kdtree_backed,
+  downsets::set_backed,
+  downsets::vector_backed,
+  downsets::vector_backed_bin,
+  downsets::vector_backed_one_dim_split,
+  downsets::vector_backed_one_dim_split_intersection_only>;
 
 
 
