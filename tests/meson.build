@@ -2,7 +2,7 @@ tests_exe = executable ('tests', 'tests.cc',
                         dependencies : [posets_dep ],
                         c_args : '-O0' )  # Deactivate optimization, otherwise it takes ages.
 
-kdtests_exe = executable ('kdtests', 'kdtree_backed.cc',
+kdtests_exe = executable ('kdtests', 'kdtests.cc',
                           dependencies : [posets_dep ])
 
 
