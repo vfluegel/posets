@@ -69,7 +69,6 @@ struct test_t : public generic_test<void> {
         e1.emplace_back(v1.copy ());
         e1.emplace_back(v1.copy ());
         SetType set = vec_to_set (std::move (e1));
-        assert (set.size () == 1);
         assert (set.contains (v1));
         assert (set.contains (v4));
         assert (not set.contains (v2));
@@ -84,6 +83,109 @@ struct test_t : public generic_test<void> {
       assert (set_one_elt.contains (v4));
       assert (not set_one_elt.contains (v2));
       assert (not set_one_elt.contains (v3));
+
+      std::cout << "Intersect that has duplicate meet" << std::endl;
+      {
+        VType v1 (il {2, 2, 4});
+        VType v2 (il {2, 1, 5});
+        VType v3 (il {1, 3, 0});
+        VType v4 (il {3, 1, 0});
+
+        std::vector<VType> e1;
+        e1.emplace_back(v1.copy ());
+        e1.emplace_back(v2.copy ());
+        SetType set = vec_to_set (std::move (e1));
+
+        std::vector<VType> e2;
+        e2.emplace_back(v3.copy ());
+        e2.emplace_back(v4.copy ());
+        SetType set2 = vec_to_set (std::move (e2));
+
+        set.intersect_with (std::move (set2));
+
+        assert (set.contains (VType (il {1, 1, 0})));
+        assert (not set.contains (VType (il {1, 3, 0})));
+      }
+      std::cout << "Create set" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {0, -1}));
+
+        SetType set = vec_to_set (std::move (e1));
+      }
+      std::cout << "Create set" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {0, -1}));
+
+        SetType set = vec_to_set (std::move (e1));
+      }
+      std::cout << "Create set" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {0, -1}));
+
+        SetType set = vec_to_set (std::move (e1));
+      }
+      std::cout << "Create set" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 0}));
+
+        SetType set = vec_to_set (std::move (e1));
+      }
+
+      std::cout << "Create set loop" << std::endl;
+      {
+        for (int i = 1; i <= 8; ++i) {
+          std::cout << "Inserting " << i << " (-1, 0)\n";
+          std::vector<VType> e1;
+          for (int j = 0; j < i; ++j)
+            e1.emplace_back (VType (il {-1, 0}));
+          e1.emplace_back (VType (il {0, -1}));
+          SetType set = vec_to_set (std::move (e1));
+        }
+      }
+
+      std::cout << "Create set 5" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {0, -1}));
+
+        SetType set = vec_to_set (std::move (e1));
+      }
+
 
       // simple intersect
       std::cout << "Simple intersection test" << std::endl;

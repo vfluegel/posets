@@ -21,7 +21,7 @@
 
 #include <getopt.h>
 
-#include <spot/misc/timer.hh>
+#include "timer.hh"
 
 #undef NO_VERBOSE
 #include "verbose.hh"
