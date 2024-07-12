@@ -185,8 +185,7 @@ namespace posets::utils {
 
       // NOTE: this works for any collection of vectors, not even set assumed
       template <std::ranges::input_range R, class Proj = std::identity>
-      kdtree (R&& elements, Proj proj = {})
-        : dim (proj (*elements.begin ()).size ()) {
+      kdtree (R&& elements, Proj proj = {}) : dim (proj (*elements.begin ()).size ()) {
         malloc = new (std::remove_cvref_t<decltype (*malloc)>);
         malloc->set_next_size (std::max (8192ul, 2 * elements.size ()));
 
@@ -207,6 +206,7 @@ namespace posets::utils {
                                       points.size (), 0);
       }
 
+      kdtree ();
       kdtree (const kdtree& other) = delete;
       kdtree (kdtree&& other) : dim (other.dim),
                                 tree (std::move (other.tree)),

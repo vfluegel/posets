@@ -30,31 +30,43 @@ namespace posets::downsets {
       template <typename V>
       friend std::ostream& operator<<(std::ostream& os, const kdtree_backed<V>& f);
 
+      void inline resetTree (std::vector<Vector>&& elements) noexcept {
+        // we first move everything into a set to remove dupes
+        std::set<Vector> elemset;
+        for (auto it = elements.begin (); it != elements.end ();)
+          elemset.insert (std::move (elements.extract (it++).value ()));
+        // and then back into a vector
+        std::vector<Vector> noreps;
+        noreps.reserve (elemset.size ());
+        for (auto it = elemset.begin (); it != elemset.end ();)
+          noreps.push_back (std::move (elemset.extract (it++).value ()));
+
+        // now, we can make a tree out of the set to eliminate dominated
+        // elements
+        this->tree = utils::kdtree<Vector> (std::move (noreps));
+
+        auto antichain = std::vector<Vector*> ();
+        antichain.reserve (noreps.size ());
+        for (Vector& e : this->tree)
+          if (!this->tree.dominates (e, true))
+            antichain.push_back (&e);
+
+        struct proj {
+            const Vector& operator() (const Vector* pv) { return *pv; }
+            Vector&& operator() (Vector*&& pv)          { return std::move (*pv); }
+        };
+        this->tree = utils::kdtree<Vector> (
+          std::move (antichain), proj ());
+        assert (this->tree.is_antichain ());
+      }
+
     public:
       typedef Vector value_type;
 
       kdtree_backed () = delete;
 
-      kdtree_backed (std::vector<Vector>&& elements) noexcept :
-        tree (std::move (elements)) {
-        assert (elements.size() > 0);
-        std::vector<Vector> antichain;
-        antichain.reserve (this->size ());
-        std::set<Vector> a_set;
-
-        // for all elements in this tree, if they are not strictly
-        // dominated by the tree, we keep them
-        for (auto& e : tree)
-          if (!this->tree.dominates (e, true))
-            a_set.insert(e.copy ()); // this does requires a copy
-
-        if (a_set.size () < this->size ()) {
-          assert (a_set.size () > 0);
-          for (auto it = a_set.begin (); it != a_set.end ();)
-            antichain.push_back (std::move (a_set.extract (it++).value ()));
-          this->tree = utils::kdtree<Vector> (std::move (antichain));
-        }
-
+      kdtree_backed (std::vector<Vector>&& elements) noexcept {
+        resetTree (elements);
       }
 
       kdtree_backed (Vector&& e) :
@@ -100,6 +112,7 @@ namespace posets::downsets {
             result.push_back (std::move (e));
         assert (result.size () > 0);
         this->tree = utils::kdtree<Vector> (std::move (result));
+        assert (this->tree.is_antichain ());
       }
 
       // Intersection in place
@@ -132,22 +145,7 @@ namespace posets::downsets {
           return;
 
         // Worst-case scenario: we do need to build trees
-        assert (intersection.size () > 0);
-        auto vector_antichain = std::vector<Vector*> ();
-        vector_antichain.reserve (intersection.size ());
-        utils::kdtree<Vector> temp_tree (std::move (intersection));
-        for (Vector& e : temp_tree) {
-          if (not temp_tree.dominates(e, true)) {
-            vector_antichain.push_back (&e);
-          }
-        }
-        struct proj {
-            const Vector& operator() (const Vector* pv) { return *pv; }
-            Vector&& operator() (Vector*&& pv)          { return std::move (*pv); }
-        };
-        this->tree = utils::kdtree<Vector> (
-          std::move (vector_antichain), proj ());
-        assert (this->tree.is_antichain ());
+        resetTree (intersection);
       }
 
       auto size () const {
