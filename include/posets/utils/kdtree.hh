@@ -38,13 +38,13 @@ namespace posets::utils {
       struct kdtree_node {
           kdtree_node_ptr left;  // left child
           kdtree_node_ptr right; // right child
-          size_t value_idx;                   // only for leaves: the index of
-                                              // the element from the list
-          int location;                       // the value at which we split
-          size_t axis;                        // the dimension at which we
-                                              // split
-          bool clean_split;                   // whether the split is s.t.
-                                              // to the left all is smaller
+          size_t value_idx;      // only for leaves: the index of
+                                 // the element from the list
+          int location;          // the value at which we split
+          size_t axis;           // the dimension at which we
+                                 // split
+          bool clean_split;      // whether the split is s.t.
+                                 // to the left all is smaller
 
           kdtree_node () = delete;
 
@@ -150,28 +150,26 @@ namespace posets::utils {
             return po.leq ();
         }
 
-        // so we're at an inner node, this means the known lower bound for the
-        // dimension at which we split for this node must be smaller than the
-        // component of the given vector
-        assert (lbounds[node->axis] <= v[node->axis]);
-        assert (strict || (lbounds[node->axis] < v[node->axis]));
-
+        // so we're at an inner node!
         // let's check if the right subtree
         // is guaranteed to have a dominating vector
         const int old_bound = lbounds[node->axis];
         size_t still_to_dom = dims_to_dom;
-        if (node->location > old_bound) {
-          if (node->location > v[node->axis]) {
-            still_to_dom--;
-          } else if (!strict && node->location >= v[node->axis]) {
-            still_to_dom--;
-          }
-          if (still_to_dom == 0) return true;
-          lbounds[node->axis] = node->location;
+        assert (node->location >= old_bound);
+        if (node->location > v[node->axis] &&
+            old_bound <= v[node->axis]) {
+          still_to_dom--;
+        } else if (!strict && node->location >= v[node->axis] &&
+                   old_bound < v[node->axis]) {
+          still_to_dom--;
         }
+        if (still_to_dom == 0) return true;
+        lbounds[node->axis] = node->location;
+
         // if we got here, we need to check on the right recursively
         bool r_succ = recursive_dominates (v, strict, node->right, lbounds, still_to_dom);
         if (r_succ) return true;
+
         // all that's left is to check on the left recursively, if pertinent
         lbounds[node->axis] = old_bound;
         if (v[node->axis] > node->location ||
