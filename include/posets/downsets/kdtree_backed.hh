@@ -30,6 +30,11 @@ namespace posets::downsets {
       template <typename V>
       friend std::ostream& operator<<(std::ostream& os, const kdtree_backed<V>& f);
 
+      struct proj {
+          const Vector& operator() (const Vector* pv) { return *pv; }
+          Vector&& operator() (Vector*&& pv)          { return std::move (*pv); }
+      };
+
       void inline resetTree (std::vector<Vector>&& elements) noexcept {
         // we first move everything into a set to remove dupes
         std::set<Vector> elemset;
@@ -51,10 +56,6 @@ namespace posets::downsets {
           if (!this->tree.dominates (e, true))
             antichain.push_back (&e);
 
-        struct proj {
-            const Vector& operator() (const Vector* pv) { return *pv; }
-            Vector&& operator() (Vector*&& pv)          { return std::move (*pv); }
-        };
         this->tree = utils::kdtree<Vector> (
           std::move (antichain), proj ());
         assert (this->tree.is_antichain ());
@@ -97,21 +98,22 @@ namespace posets::downsets {
       // Union in place
       void union_with (kdtree_backed&& other) {
         assert (other.size () > 0);
-        std::vector<Vector> result;
+        std::vector<Vector*> result;
         result.reserve (this->size () + other.size ());
         // for all elements in this tree, if they are not strictly
         // dominated by the other tree, we keep them
         for (auto& e : tree)
-          if (!other.tree.dominates(e, true))
-            result.push_back(e.copy ()); // this does requires a copy
+          if (!other.tree.dominates (e, true))
+            result.push_back (&e);
 
         // for all elements in the other tree, if they are not dominated
         // (not necessarily strict) by this tree, we keep them
         for (auto& e : other.tree)
           if (not this->tree.dominates (e))
-            result.push_back (std::move (e));
+            result.push_back (&e);
         assert (result.size () > 0);
-        this->tree = utils::kdtree<Vector> (std::move (result));
+        this->tree = utils::kdtree<Vector> (
+          std::move (result), proj ());
         assert (this->tree.is_antichain ());
       }
 
