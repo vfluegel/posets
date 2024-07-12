@@ -9,7 +9,7 @@
 #include <cxxabi.h>
 #include <experimental/random>
 
-#include <spot/misc/timer.hh>
+#include "timer.hh"
 
 #include <posets/utils/vector_mm.hh>
 #include <posets/downsets.hh>
