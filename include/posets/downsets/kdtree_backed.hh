@@ -37,9 +37,8 @@ namespace posets::downsets {
 
       void inline resetTree (std::vector<Vector>&& elements) noexcept {
         // we first move everything into a set to remove dupes
-        std::set<Vector> elemset;
-        for (auto it = elements.begin (); it != elements.end ();)
-          elemset.insert (std::move (elements.extract (it++).value ()));
+        std::set<Vector> elemset(std::make_move_iterator (elements.begin ()),
+                                 std::make_move_iterator (elements.end ()));
         // and then back into a vector
         std::vector<Vector> noreps;
         noreps.reserve (elemset.size ());
@@ -67,7 +66,7 @@ namespace posets::downsets {
       kdtree_backed () = delete;
 
       kdtree_backed (std::vector<Vector>&& elements) noexcept {
-        resetTree (elements);
+        resetTree (std::move (elements));
       }
 
       kdtree_backed (Vector&& e) :
@@ -147,7 +146,7 @@ namespace posets::downsets {
           return;
 
         // Worst-case scenario: we do need to build trees
-        resetTree (intersection);
+        resetTree (std::move (intersection));
       }
 
       auto size () const {

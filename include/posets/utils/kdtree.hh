@@ -206,7 +206,7 @@ namespace posets::utils {
                                       points.size (), 0);
       }
 
-      kdtree ();
+      kdtree () : malloc (nullptr) {} ;
       kdtree (const kdtree& other) = delete;
       kdtree (kdtree&& other) : dim (other.dim),
                                 tree (std::move (other.tree)),
