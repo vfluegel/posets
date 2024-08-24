@@ -1,5 +1,8 @@
 #pragma once
 
+#include <type_traits>
+#include <span>
+
 namespace posets {
   template <typename T>
   concept Vector = not std::is_default_constructible_v<T> and
