@@ -13,6 +13,7 @@
 
 #include <boost/pool/object_pool.hpp>
 
+#include <posets/concepts.hh>
 
 /*
  * This is Shrisha Rao's version of a kd-tree for variable dimension. The
