@@ -6,6 +6,8 @@
 #include <iostream>
 #include <cassert>
 
+#include <posets/concepts.hh>
+
 #include <posets/utils/vector_mm.hh>
 
 namespace posets::downsets {

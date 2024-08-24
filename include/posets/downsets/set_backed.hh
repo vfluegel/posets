@@ -7,6 +7,8 @@
 #include <cassert>
 #include <posets/utils/ref_ptr_cmp.hh>
 
+#include <posets/concepts.hh>
+
 namespace posets::downsets {
   template <Vector V>
   class set_backed {

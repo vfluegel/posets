@@ -8,6 +8,8 @@
 
 #include <boost/pool/object_pool.hpp>
 
+#include <posets/concepts.hh>
+
 namespace posets::vectors {
   // What's the multiple of T's we store.  This is used to speed up compilation
   // and reduce program size.
@@ -32,7 +34,7 @@ namespace posets::vectors {
     public:
       using value_type = T;
 
-      array_ptr_backed_ (size_t k) : k {k}, data (malloc.construct ()) {
+      array_ptr_backed_ (size_t k) : data (malloc.construct ()), k {k} {
         assert (k <= Units * T_PER_UNIT);
       }
 

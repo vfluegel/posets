@@ -5,6 +5,8 @@
 #include <iostream>
 #include <cassert>
 
+#include <posets/concepts.hh>
+
 namespace posets::downsets {
   // A forward definition to allow for friend status
   template <Vector V>

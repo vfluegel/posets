@@ -1,4 +1,6 @@
 #pragma once
+
+#include <posets/concepts.hh>
 #include <span>
 
 namespace posets::vectors {

@@ -8,6 +8,8 @@
 #include <list>
 #include <functional>
 
+#include <posets/concepts.hh>
+
 namespace posets::downsets {
   template <Vector V>
   class full_set {

@@ -8,6 +8,8 @@
 #include <sstream>
 #include <cstdlib>
 
+#include <posets/concepts.hh>
+
 namespace posets::downsets {
   template <Vector V>
   class vector_backed_bin {
@@ -25,7 +27,7 @@ namespace posets::downsets {
         for (auto&& e : elements)
           insert (std::move (e));
       }
-      
+
     private:
       vector_backed_bin (size_t starting_vector_set_size) {
         vector_set.resize (starting_vector_set_size);

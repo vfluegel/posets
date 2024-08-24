@@ -5,6 +5,8 @@
 #include <cmath>
 #include <vector>
 
+#include <posets/concepts.hh>
+
 #include <posets/downsets/kdtree_backed.hh>
 #include <posets/downsets/vector_backed.hh>
 

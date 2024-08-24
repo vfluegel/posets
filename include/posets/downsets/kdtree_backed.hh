@@ -7,6 +7,7 @@
 #include <set>
 #include <vector>
 
+#include <posets/concepts.hh>
 #include <posets/utils/kdtree.hh>
 
 namespace posets::downsets {
@@ -36,21 +37,27 @@ namespace posets::downsets {
       };
 
       void inline resetTree (std::vector<V>&& elements) noexcept {
-        // we first move everything into a set to remove dupes
-        std::set<V> elemset(std::make_move_iterator (elements.begin ()),
-                                 std::make_move_iterator (elements.end ()));
-        // and then back into a vector
-        std::vector<V> noreps;
-        noreps.reserve (elemset.size ());
-        for (auto it = elemset.begin (); it != elemset.end ();)
-          noreps.push_back (std::move (elemset.extract (it++).value ()));
+        // sort everything
+        std::sort (elements.begin (),
+                   elements.end (),
+                   [] (const V& v1, const V& v2) {
+                     // TODO Is that the right thing to do?  It's very costly.
+                     return v1.partial_order (v2).leq ();
+                   });
+        // then remove duplicates
+        size_t dups_pos = elements.size ();
+        for (size_t i = elements.size () - 1; i > 0; --i)
+          if (elements[i] == elements[i - 1])
+            std::swap (elements[i], elements[--dups_pos]);
+        if (dups_pos != elements.size ())
+          elements.erase (elements.begin () + dups_pos, elements.end ());
 
         // now, we can make a tree out of the set to eliminate dominated
         // elements
-        this->tree = utils::kdtree<V> (std::move (noreps));
+        this->tree = utils::kdtree<V> (std::move (elements));
 
         auto antichain = std::vector<V*> ();
-        antichain.reserve (noreps.size ());
+        antichain.reserve (elements.size ());
         for (V& e : this->tree)
           if (!this->tree.dominates (e, true))
             antichain.push_back (&e);

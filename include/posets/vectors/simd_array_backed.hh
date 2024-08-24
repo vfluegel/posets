@@ -4,6 +4,7 @@
 #include <experimental/simd>
 #include <iostream>
 
+#include <posets/concepts.hh>
 #include <posets/utils/simd_traits.hh>
 
 namespace posets::vectors {

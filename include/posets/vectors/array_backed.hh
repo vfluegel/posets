@@ -4,6 +4,8 @@
 #include <iostream>
 #include <span>
 
+#include <posets/concepts.hh>
+
 namespace posets::vectors {
   // What's the multiple of T's we store.  This is used to speed up compilation
   // and reduce program size.

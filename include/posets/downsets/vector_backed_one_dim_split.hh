@@ -8,6 +8,8 @@
 #include <sstream>
 #include <cstdlib>
 
+#include <posets/concepts.hh>
+
 namespace posets::downsets {
   template <Vector V>
   class vector_backed_one_dim_split {

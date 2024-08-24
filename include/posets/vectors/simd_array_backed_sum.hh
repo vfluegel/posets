@@ -5,6 +5,7 @@
 #include <experimental/simd>
 #include <iostream>
 
+#include <posets/concepts.hh>
 #include <posets/vectors/simd_po_res.hh>
 #include <posets/utils/simd_traits.hh>
 

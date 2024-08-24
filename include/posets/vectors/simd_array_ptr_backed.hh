@@ -6,6 +6,7 @@
 
 #include <boost/pool/object_pool.hpp>
 
+#include <posets/concepts.hh>
 #include <posets/utils/simd_traits.hh>
 
 namespace posets::vectors {

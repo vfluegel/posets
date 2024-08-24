@@ -4,6 +4,7 @@
 #include <iostream>
 #include <span>
 
+#include <posets/concepts.hh>
 #include <posets/vectors/simd_po_res.hh>
 #include <posets/utils/simd_traits.hh>
 
