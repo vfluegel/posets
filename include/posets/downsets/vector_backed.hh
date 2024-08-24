@@ -7,19 +7,19 @@
 
 namespace posets::downsets {
   // A forward definition to allow for friend status
-  template <typename Vector>
+  template <Vector V>
   class vector_or_kdtree_backed;
 
-  template <typename Vector>
+  template <Vector V>
   class vector_backed {
     public:
-      typedef Vector value_type;
+      typedef V value_type;
 
-      vector_backed (Vector&& v) {
+      vector_backed (V&& v) {
         insert (std::move (v));
       }
 
-      vector_backed (std::vector<Vector>&& elements) noexcept {
+      vector_backed (std::vector<V>&& elements) noexcept {
         assert (elements.size() > 0);
         for (auto&& e : elements)
           insert (std::move (e));
@@ -27,7 +27,7 @@ namespace posets::downsets {
 
     private:
       vector_backed () = default;
-      std::vector<Vector> vector_set;
+      std::vector<V> vector_set;
 
     public:
       vector_backed (const vector_backed&) = delete;
@@ -37,7 +37,7 @@ namespace posets::downsets {
 
       bool operator== (const vector_backed& other) = delete;
 
-      bool contains (const Vector& v) const {
+      bool contains (const V& v) const {
         for (const auto& e : vector_set)
           if (v.partial_order (e).leq ())
             return true;
@@ -48,7 +48,7 @@ namespace posets::downsets {
         return vector_set.size ();
       }
 
-      bool insert (Vector&& v) {
+      bool insert (V&& v) {
         bool must_remove = false;
 
         // This is like remove_if, but allows breaking.
@@ -90,7 +90,7 @@ namespace posets::downsets {
           bool dominated = false;
 
           for (auto& y : other.vector_set) {
-            Vector v = x.meet (y);
+            V v = x.meet (y);
             if (v == x)
               dominated = true;
             intersection.insert (std::move (v));
@@ -119,13 +119,13 @@ namespace posets::downsets {
       auto        end()         { return vector_set.end (); }
       const auto  end() const   { return vector_set.end (); }
 
-      friend class vector_or_kdtree_backed<Vector>;
+      template <Vector V2>
+      friend class vector_or_kdtree_backed;
   };
 
-
-  template <typename Vector>
+  template <Vector V>
   inline
-  std::ostream& operator<<(std::ostream& os, const vector_backed<Vector>& f)
+  std::ostream& operator<<(std::ostream& os, const vector_backed<V>& f)
   {
     for (auto&& el : f)
       os << el << std::endl;

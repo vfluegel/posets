@@ -24,11 +24,11 @@ namespace posets::vectors {
     public:
       using value_type = T;
 
-    private:
-      simd_array_backed_sum_ (size_t k) : k {k}, sum {0} { }
+      simd_array_backed_sum_ (size_t k) : k {k}, sum {0} {
+        assert (utils::simd_traits<T>::nsimds (k) <= nsimds);
+      }
 
-    public:
-      simd_array_backed_sum_ (std::span<const T> v) : k {v.size ()} {
+      simd_array_backed_sum_ (std::span<const T> v) : simd_array_backed_sum_ (v.size ()) {
         sum = 0;
         for (auto&& c : v)
           sum += c;
@@ -61,7 +61,7 @@ namespace posets::vectors {
         return nsimds * simd_size;
       }
 
-      void to_vector (std::span<char> v) const {
+      void to_vector (std::span<T> v) const {
         memcpy ((char*) v.data (), (char*) data.data (), data.size () * simd_size);
       }
 
@@ -149,11 +149,5 @@ namespace posets::vectors {
       }
   };
 
-  template <typename T, size_t nsimds>
-  inline
-  std::ostream& operator<<(std::ostream& os, const vectors::simd_array_backed_sum_<T, nsimds>& v)
-  {
-    return v.print (os);
-  }
+  static_assert (Vector<simd_array_backed_sum<int, 128>>);
 }
-

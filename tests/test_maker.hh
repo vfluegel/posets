@@ -7,6 +7,8 @@
 #include <cxxabi.h>
 #include <string>
 
+#include <posets/concepts.hh>
+
 template <typename SetType>
 class test_t;
 
@@ -30,7 +32,7 @@ struct template_type_list;
 static std::set<std::string> set_names, vector_names;
 
 #define typestring(T)                                                   \
-  ([] () { int _; return abi::__cxa_demangle (typeid(T).name (), 0, 0, &_); }) ()
+  ([] () -> std::string { int _; return abi::__cxa_demangle (typeid(T).name (), 0, 0, &_); }) ()
 
 namespace posets::downsets {
   template <typename VecType>
@@ -65,9 +67,12 @@ void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
   tests[ts] = test;
 
   if constexpr (CreateAll) {
+    auto setallvec = typestring (SetType<VecType>);
+    setallvec = setallvec.substr (0, setallvec.find_first_of ('<')) + "<posets::vectors::all>";
+
     for (auto&& ts : {
         typestring (posets::downsets::all<VecType>),
-        typestring (SetType<posets::vectors::all>),
+        setallvec,
         typestring (posets::downsets::all<posets::vectors::all>)
       }) {
       auto prev = tests[ts];
@@ -83,7 +88,8 @@ void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
 template <bool CreateAll = true,
           template <typename V> typename SetType, typename VecType, typename VecType2, typename... VecTypes>
 void register_maker (type_list<VecType, VecType2, VecTypes...>*, SetType<VecType>* = 0) {
-  set_names.insert (typestring (SetType<int>));
+  auto s = typestring (SetType<VecType>);
+  set_names.insert (s.substr (0, s.find_first_of ('<')));
   register_maker<CreateAll, SetType> ((type_list<VecType>*) 0);
   register_maker<CreateAll, SetType> ((type_list<VecType2, VecTypes...>*) 0);
 }

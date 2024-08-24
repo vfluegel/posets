@@ -23,13 +23,13 @@
  */
 namespace posets::utils {
   // Forward definition for the operator<<
-  template <typename>
+  template <Vector>
   class kdtree;
 
-  template <typename Vector>
-  std::ostream& operator<< (std::ostream& os, const utils::kdtree<Vector>& f);
+  template <Vector V>
+  std::ostream& operator<< (std::ostream& os, const utils::kdtree<V>& f);
 
-  template <typename Vector>
+  template <Vector V>
   class kdtree {
     private:
       struct kdtree_node;
@@ -66,8 +66,8 @@ namespace posets::utils {
       kdtree_node_ptr tree;
       boost::object_pool<kdtree_node>* malloc;
 
-      template <typename V>
-      friend std::ostream& operator<< (std::ostream& os, const kdtree<V>& f);
+      template <Vector V2>
+      friend std::ostream& operator<< (std::ostream& os, const kdtree<V2>& f);
 
       /*
        * This is one of the only interesting parts of the code: building the
@@ -135,7 +135,7 @@ namespace posets::utils {
        * counter dims_to_dom which records the dimensions on which the current
        * region is not yet dominating the region of v
        */
-      bool recursive_dominates (const Vector& v, bool strict,
+      bool recursive_dominates (const V& v, bool strict,
                                 kdtree_node_ptr node,
                                 int* lbounds, size_t dims_to_dom) const {
         assert (node != nullptr);
@@ -181,7 +181,7 @@ namespace posets::utils {
       }
 
     public:
-      std::vector<Vector> vector_set;
+      std::vector<V> vector_set;
 
       // NOTE: this works for any collection of vectors, not even set assumed
       template <std::ranges::input_range R, class Proj = std::identity>
@@ -230,7 +230,7 @@ namespace posets::utils {
         return *this;
       }
 
-      bool dominates (const Vector& v, bool strict = false) const {
+      bool dominates (const V& v, bool strict = false) const {
         int lbounds[this->dim];
         std::fill_n (lbounds, this->dim, std::numeric_limits<int>::min ());
         return this->recursive_dominates (v, strict, this->tree, lbounds, this->dim);
@@ -270,8 +270,8 @@ namespace posets::utils {
       }
   };
 
-  template <typename Vector>
-  inline std::ostream& operator<< (std::ostream& os, const kdtree<Vector>& f) {
+  template <Vector V>
+  inline std::ostream& operator<< (std::ostream& os, const kdtree<V>& f) {
     for (auto&& el : f.vector_set)
       os << el << std::endl;
 

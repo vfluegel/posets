@@ -22,8 +22,9 @@ namespace posets::vectors {
     public:
       using value_type = typename X::value_type;
 
-      template <typename Alloc>
-      X_and_bitset (const std::vector<value_type, Alloc>& v) :
+      X_and_bitset (size_t k) : k {k}, x {std::min (bitset_threshold, k)} {}
+
+      X_and_bitset (std::span<const value_type> v) :
         k {v.size ()},
         x {std::span (v.data (), std::min (bitset_threshold, k))},
         sum {0}
@@ -152,6 +153,14 @@ namespace posets::vectors {
         return bitset_bin;
       }
 
+      std::ostream& print (std::ostream& os) const {
+        os << "{ ";
+        for (size_t i = 0; i < this->size (); ++i)
+          os << (int) (*this)[i] << " ";
+        os << "}";
+        return os;
+      }
+
     private:
       const size_t k;
       X x;
@@ -165,16 +174,9 @@ namespace posets::vectors {
 
     public:
       X_and_bitset (X&& x) : X (std::move (x)) {}
+      X_and_bitset copy () const { return X::copy (); }
+      X_and_bitset meet (const X_and_bitset& other) const { return X::meet (other); }
   };
 
-  template <class X, size_t Bools>
-  inline
-  std::ostream& operator<<(std::ostream& os, const X_and_bitset<X, Bools>& v)
-  {
-    os << "{ ";
-    for (size_t i = 0; i < v.size (); ++i)
-      os << (int) v[i] << " ";
-    os << "}";
-    return os;
-  }
+  static_assert (Vector<X_and_bitset<vector_backed<int>, 128>>);
 }

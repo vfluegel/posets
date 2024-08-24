@@ -21,8 +21,9 @@ namespace posets::vectors {
       using base = std::array<T, Units * T_PER_UNIT>;
 
     public:
-      array_backed_ (std::span<const T> v) : k {v.size ()} {
-        assert (k <= Units * T_PER_UNIT);
+      array_backed_ (size_t k) : k {k} { assert (k <= Units * T_PER_UNIT); }
+
+      array_backed_ (std::span<const T> v) : array_backed_ (v.size ()) {
         std::copy (v.begin (), v.end (), this->data ());
         if (Units * T_PER_UNIT > k)
           std::fill (&(*this)[k], this->end (), 0);
@@ -31,7 +32,6 @@ namespace posets::vectors {
       size_t size () const { return k; }
 
     private:
-      array_backed_ (size_t k) : k {k} {}
       array_backed_ (const self& other) = default;
 
     public:
@@ -55,7 +55,7 @@ namespace posets::vectors {
         return elts;
       }
 
-      void to_vector (std::span<char> v) const {
+      void to_vector (std::span<T> v) const {
         assert (v.size () >= k);
         std::copy (this->begin (), &(*this)[k], v.data ());
       }
@@ -106,18 +106,17 @@ namespace posets::vectors {
         return res;
       }
 
+      std::ostream& print (std::ostream& os) const {
+        os << "{ ";
+        for (size_t i = 0; i < this->size (); ++i)
+          os << (int) (*this)[i] << " ";
+        os << "}";
+        return os;
+      }
+
     private:
       const size_t k;
   };
 
-  template <typename T, size_t Units>
-  inline
-  std::ostream& operator<<(std::ostream& os, const vectors::array_backed_<T, Units>& v)
-  {
-    os << "{ ";
-    for (size_t i = 0; i < v.size (); ++i)
-      os << (int) v[i] << " ";
-    os << "}";
-    return os;
-  }
+  static_assert (Vector<array_backed<int, 128>>);
 }

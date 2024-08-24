@@ -26,11 +26,11 @@ namespace posets::vectors {
     public:
       using value_type = T;
 
-    private:
-      simd_array_ptr_backed_ (size_t k) : k {k} { }
+      simd_array_ptr_backed_ (size_t k) : data (malloc.construct ()), k {k} {
+        assert (utils::simd_traits<T>::nsimds (k) <= nsimds);
+      }
 
-    public:
-      simd_array_ptr_backed_ (std::span<const T> v) : data (malloc.construct ()), k {v.size ()} {
+      simd_array_ptr_backed_ (std::span<const T> v) : simd_array_ptr_backed_ (v.size ()) {
         data->back () ^= data->back ();
         // Trust memcpy to DTRT.
         std::memcpy ((char*) data->data (), (char*) v.data (), v.size ());
@@ -91,7 +91,7 @@ namespace posets::vectors {
         return nsimds * simd_size;
       }
 
-      void to_vector (std::span<char> v) const {
+      void to_vector (std::span<T> v) const {
         // Sadly, we can't assume that v is aligned, as it could be the values after the bool cut-off.
         for (size_t i = 0; i < nsimds; ++i) {
           (*data)[i].copy_to (&v[i * simd_size], std::experimental::vector_aligned);
@@ -114,6 +114,14 @@ namespace posets::vectors {
         return k;
       }
 
+      std::ostream& print (std::ostream& os) const {
+        os << "{ ";
+        for (size_t i = 0; i < this->size (); ++i)
+          os << (int) (*this)[i] << " ";
+        os << "}";
+        return os;
+      }
+
     private:
       friend simd_po_res<self>;
       array_t* data = nullptr;
@@ -127,14 +135,5 @@ namespace posets::vectors {
       }
   };
 
-template <typename T, size_t nsimds>
-inline
-std::ostream& operator<<(std::ostream& os, const vectors::simd_array_ptr_backed_<T, nsimds>& v)
-{
-  os << "{ ";
-  for (size_t i = 0; i < v.size (); ++i)
-    os << (int) v[i] << " ";
-  os << "}";
-  return os;
-}
+    static_assert (Vector<simd_array_ptr_backed<int, 128>>);
 }

@@ -9,17 +9,17 @@
 #include <posets/utils/vector_mm.hh>
 
 namespace posets::downsets {
-  template <typename Vector>
+  template <Vector V>
   class vector_backed_one_dim_split_intersection_only {
       using self = vector_backed_one_dim_split_intersection_only;
     public:
-      typedef Vector value_type;
+      typedef V value_type;
 
-      vector_backed_one_dim_split_intersection_only (Vector&& v) {
+      vector_backed_one_dim_split_intersection_only (V&& v) {
         insert (std::move (v));
       }
 
-      vector_backed_one_dim_split_intersection_only (std::vector<Vector>&& elements) noexcept {
+      vector_backed_one_dim_split_intersection_only (std::vector<V>&& elements) noexcept {
         assert (elements.size() > 0);
         for (auto&& e : elements)
           insert (std::move (e));
@@ -35,7 +35,7 @@ namespace posets::downsets {
 
       bool operator== (const self& other) = delete;
 
-      bool contains (const Vector& v) const {
+      bool contains (const V& v) const {
         for (const auto& e : vector_set)
           if (v.partial_order (e).leq ())
             return true;
@@ -46,13 +46,13 @@ namespace posets::downsets {
         return vector_set.size ();
       }
 
-      bool insert (Vector&& v) {
+      bool insert (V&& v) {
         bool must_remove = false;
-  
+
         // This is like remove_if, but allows breaking.
         auto result = vector_set.begin ();
         auto end = vector_set.end ();
-  
+
         for (auto it = result; it != end; ++it) {
 	  auto res = v.partial_order (*it);
 	  if (not must_remove and res.leq ()) { // v is dominated.
@@ -68,7 +68,7 @@ namespace posets::downsets {
 	    ++result;
 	  }
         }
-  
+
         if (result != vector_set.end ())
 	  vector_set.erase (result, vector_set.end ());
         vector_set.push_back (std::move (v));
@@ -80,17 +80,17 @@ namespace posets::downsets {
           insert (std::move (e));
       }
 
-      template <typename V>
+      template <typename RefVec>
       class disregard_first_component {
         public:
-          bool operator() (const V& v1, const V& v2) const {
-            utils::vector_mm<typename Vector::value_type> v (v1.get ().size ());
-            v.reserve (Vector::capacity_for (v.size ()));
+          bool operator() (const RefVec& v1, const RefVec& v2) const {
+            utils::vector_mm<typename V::value_type> v (v1.get ().size ());
+            v.reserve (V::capacity_for (v.size ()));
 
             v2.get ().to_vector (v);
             v[0] = v1.get ()[0];
             v.resize (v2.get ().size ());
-            return v1.get () < Vector (v);
+            return v1.get () < V (v);
           }
       };
 
@@ -110,9 +110,9 @@ namespace posets::downsets {
         // other.vector_set, prioritazing the vectors in other.vector_set that
         // have a larger first component (hence can potentially dominate x).
 
-        using cache_red_dim = std::set<std::reference_wrapper<const Vector>,
-                                       disregard_first_component<std::reference_wrapper<const Vector>>>;
-        using vector_of_vectors = std::vector<std::reference_wrapper<const Vector>>;
+        using cache_red_dim = std::set<std::reference_wrapper<const V>,
+                                       disregard_first_component<std::reference_wrapper<const V>>>;
+        using vector_of_vectors = std::vector<std::reference_wrapper<const V>>;
         std::map<int, std::pair<cache_red_dim, vector_of_vectors>> split_cache;
 
         for (const auto& x : vector_set) {
@@ -133,8 +133,8 @@ namespace posets::downsets {
             }
           }) ();
 
-          auto meet = [&] (std::reference_wrapper<const Vector> y) {
-            Vector &&v = x.meet (y.get ());
+          auto meet = [&] (std::reference_wrapper<const V> y) {
+            V &&v = x.meet (y.get ());
             if (v == x)
               dominated = true;
             intersection.insert (std::move (v));
@@ -168,13 +168,13 @@ namespace posets::downsets {
       const auto  end() const   { return vector_set.end (); }
 
     private:
-      std::vector<Vector> vector_set;
+      std::vector<V> vector_set;
    };
 
-  template <typename Vector>
+  template <Vector V>
   inline
   std::ostream& operator<<(std::ostream& os,
-                           const vector_backed_one_dim_split_intersection_only<Vector>& f)
+                           const vector_backed_one_dim_split_intersection_only<V>& f)
   {
     for (auto&& el : f)
       os << el << std::endl;

@@ -88,15 +88,12 @@ using vector_types = type_list<posets::vectors::vector_backed<test_value_type>,
 using set_types = template_type_list<posets::downsets::vector_backed,
                                      posets::downsets::vector_backed_bin>;
 
-
-
 void usage (const char* progname) {
   std::cout << "usage: " << progname << " SETTYPE VECTYPE" << std::endl;
 
   std::cout << "  SETTYPE:\n  - all" << std::endl;
   for (auto&& s : set_names) {
-    auto start = s.find_last_of (':') + 1;
-    std::cout << "  - " << s.substr (start, s.find_first_of ('<') - start) << std::endl;
+    std::cout << "  - " << s.substr (s.find_last_of (':') + 1) << std::endl;
   }
 
   std::cout << "  VECTYPE:\n  - all" << std::endl;

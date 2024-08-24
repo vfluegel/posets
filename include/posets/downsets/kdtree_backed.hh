@@ -11,72 +11,72 @@
 
 namespace posets::downsets {
   // Forward definition for the operator<<s.
-  template <typename>
+  template <Vector>
   class kdtree_backed;
 
-  template <typename Vector>
-  std::ostream& operator<<(std::ostream& os, const kdtree_backed<Vector>& f);
+  template <Vector V>
+  std::ostream& operator<<(std::ostream& os, const kdtree_backed<V>& f);
 
   // Another forward def to have friend status
-  template <typename Vector>
+  template <Vector V>
   class vector_or_kdtree_backed;
 
   // Finally the actual class definition
-  template <typename Vector>
+  template <Vector V>
   class kdtree_backed {
     private:
-      utils::kdtree<Vector> tree;
+      utils::kdtree<V> tree;
 
-      template <typename V>
-      friend std::ostream& operator<<(std::ostream& os, const kdtree_backed<V>& f);
+      template <Vector V2>
+      friend std::ostream& operator<<(std::ostream& os, const kdtree_backed<V2>& f);
 
       struct proj {
-          const Vector& operator() (const Vector* pv) { return *pv; }
-          Vector&& operator() (Vector*&& pv)          { return std::move (*pv); }
+          const V& operator() (const V* pv) { return *pv; }
+          V&& operator() (V*&& pv)          { return std::move (*pv); }
       };
 
-      void inline resetTree (std::vector<Vector>&& elements) noexcept {
+      void inline resetTree (std::vector<V>&& elements) noexcept {
         // we first move everything into a set to remove dupes
-        std::set<Vector> elemset(std::make_move_iterator (elements.begin ()),
+        std::set<V> elemset(std::make_move_iterator (elements.begin ()),
                                  std::make_move_iterator (elements.end ()));
         // and then back into a vector
-        std::vector<Vector> noreps;
+        std::vector<V> noreps;
         noreps.reserve (elemset.size ());
         for (auto it = elemset.begin (); it != elemset.end ();)
           noreps.push_back (std::move (elemset.extract (it++).value ()));
 
         // now, we can make a tree out of the set to eliminate dominated
         // elements
-        this->tree = utils::kdtree<Vector> (std::move (noreps));
+        this->tree = utils::kdtree<V> (std::move (noreps));
 
-        auto antichain = std::vector<Vector*> ();
+        auto antichain = std::vector<V*> ();
         antichain.reserve (noreps.size ());
-        for (Vector& e : this->tree)
+        for (V& e : this->tree)
           if (!this->tree.dominates (e, true))
             antichain.push_back (&e);
 
-        this->tree = utils::kdtree<Vector> (
+        this->tree = utils::kdtree<V> (
           std::move (antichain), proj ());
         assert (this->tree.is_antichain ());
       }
 
     public:
-      typedef Vector value_type;
+      typedef V value_type;
 
       kdtree_backed () = delete;
 
-      kdtree_backed (std::vector<Vector>&& elements) noexcept {
+      kdtree_backed (std::vector<V>&& elements) noexcept {
         resetTree (std::move (elements));
       }
 
-      kdtree_backed (Vector&& e) :
-        tree ( std::array<Vector, 1> { std::move (e) } )
+      kdtree_backed (V&& e) :
+        tree ( std::array<V, 1> { std::move (e) } )
       {}
 
       template <typename F>
       auto apply (const F& lambda) const {
         const auto& backing_vector = this->tree.vector_set;
-        std::vector<Vector> ss;
+        std::vector<V> ss;
         ss.reserve (backing_vector.size ());
 
         for (const auto& v : backing_vector)
@@ -90,14 +90,14 @@ namespace posets::downsets {
       kdtree_backed& operator= (const kdtree_backed&) = delete;
       kdtree_backed& operator= (kdtree_backed&&) = default;
 
-      bool contains (const Vector& v) const {
+      bool contains (const V& v) const {
         return this->tree.dominates(v);
       }
 
       // Union in place
       void union_with (kdtree_backed&& other) {
         assert (other.size () > 0);
-        std::vector<Vector*> result;
+        std::vector<V*> result;
         result.reserve (this->size () + other.size ());
         // for all elements in this tree, if they are not strictly
         // dominated by the other tree, we keep them
@@ -111,14 +111,14 @@ namespace posets::downsets {
           if (not this->tree.dominates (e))
             result.push_back (&e);
         assert (result.size () > 0);
-        this->tree = utils::kdtree<Vector> (
+        this->tree = utils::kdtree<V> (
           std::move (result), proj ());
         assert (this->tree.is_antichain ());
       }
 
       // Intersection in place
       void intersect_with (const kdtree_backed& other) {
-        std::vector<Vector> intersection;
+        std::vector<V> intersection;
         bool smaller_set = false;
 
         for (auto& x : tree) {
@@ -158,11 +158,11 @@ namespace posets::downsets {
       auto        end ()         { return this->tree.end (); }
       const auto  end () const   { return this->tree.end (); }
 
-      friend class vector_or_kdtree_backed<Vector>;
+      friend class vector_or_kdtree_backed<V>;
   };
 
-  template <typename Vector>
-  inline std::ostream& operator<<(std::ostream& os, const kdtree_backed<Vector>& f) {
+  template <Vector V>
+  inline std::ostream& operator<<(std::ostream& os, const kdtree_backed<V>& f) {
     os << f.tree << std::endl;
     return os;
   }

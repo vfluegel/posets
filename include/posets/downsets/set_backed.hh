@@ -8,16 +8,16 @@
 #include <posets/utils/ref_ptr_cmp.hh>
 
 namespace posets::downsets {
-  template <typename Vector>
+  template <Vector V>
   class set_backed {
     public:
-      typedef Vector value_type;
+      typedef V value_type;
 
     private:
       set_backed () {}
 
     public:
-      set_backed (Vector&& v) noexcept {
+      set_backed (V&& v) noexcept {
         insert (std::move (v));
       }
 
@@ -25,7 +25,7 @@ namespace posets::downsets {
       set_backed (set_backed&&) = default;
       set_backed& operator= (set_backed&&) = default;
 
-      bool contains (const Vector& v) const {
+      bool contains (const V& v) const {
         for (const auto& e : vector_set)
           if (v.partial_order (e).leq ())
             return true;
@@ -36,8 +36,8 @@ namespace posets::downsets {
         return vector_set.size ();
       }
 
-      bool insert (Vector&& v) {
-        utils::reference_wrapper_set<const Vector> to_remove;
+      bool insert (V&& v) {
+        utils::reference_wrapper_set<const V> to_remove;
         bool should_be_inserted = true;
 
         for (const auto& e : vector_set) {
@@ -74,7 +74,7 @@ namespace posets::downsets {
           bool dominated = false;
 
           for (const auto& y : other.vector_set) {
-            Vector &&v = x.meet (y);
+            V &&v = x.meet (y);
             if (v == x)
               dominated = true;
             intersection.insert (std::move (v));
@@ -93,7 +93,7 @@ namespace posets::downsets {
 
       template <typename F>
       void apply_inplace (const F& lambda) {
-        std::set<Vector> new_set;
+        std::set<V> new_set;
         for (auto&& el : vector_set) {
           auto&& changed_el = lambda (el);
           new_set.insert (changed_el);
@@ -116,12 +116,12 @@ namespace posets::downsets {
 
 
     private:
-      std::set<Vector> vector_set;
+      std::set<V> vector_set;
   };
 
-  template <typename Vector>
+  template <Vector V>
   inline
-  std::ostream& operator<<(std::ostream& os, const set_backed<Vector>& f)
+  std::ostream& operator<<(std::ostream& os, const set_backed<V>& f)
   {
     for (auto&& el : f)
       os << el << std::endl;

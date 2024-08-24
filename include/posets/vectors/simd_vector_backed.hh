@@ -18,14 +18,13 @@ namespace posets::vectors {
     public:
       using value_type = T;
 
-    private:
       simd_vector_backed (size_t k) : k {k},
                                       nsimds {traits::nsimds (k)},
                                       data (nsimds) {
         assert (nsimds >= 1);
         data.back () ^= data.back ();
       }
-    public:
+
       simd_vector_backed (std::span<const T> v) : simd_vector_backed (v.size ()) {
         sum = 0;
         for (auto&& c : v)
@@ -128,6 +127,14 @@ namespace posets::vectors {
         return (sum + k) / k;
       }
 
+      std::ostream& print (std::ostream& os) const {
+        os << "{ ";
+        for (size_t i = 0; i < this->size (); ++i)
+          os << (int) (*this)[i] << " ";
+        os << "}";
+        return os;
+      }
+
     private:
       friend simd_po_res<self>;
       const size_t k, nsimds;
@@ -141,14 +148,6 @@ namespace posets::vectors {
         return utils::simd_traits<T>::capacity_for (elts);
       }
   };
-template <typename T>
-inline
-std::ostream& operator<<(std::ostream& os, const vectors::simd_vector_backed<T>& v)
-{
-  os << "{ ";
-  for (size_t i = 0; i < v.size (); ++i)
-    os << (int) v[i] << " ";
-  os << "}";
-  return os;
-}
+
+  static_assert (Vector<simd_vector_backed<int>>);
 }

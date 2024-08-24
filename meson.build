@@ -8,7 +8,8 @@ if not meson.is_subproject()
     extra_args = []
   else
     extra_args = ['-ftrack-macro-expansion=0',
-                  '-fno-diagnostics-show-caret']
+                  '-fno-diagnostics-show-caret',
+                  '-fconcepts-diagnostics-depth=2']
   endif
   add_global_arguments (extra_args, language: 'cpp')
 endif

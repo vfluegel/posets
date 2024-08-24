@@ -1,5 +1,7 @@
 #pragma once
 
+#include <posets/concepts.hh>
+
 #include <posets/vectors/traits.hh>
 
 #include <posets/downsets/full_set.hh>

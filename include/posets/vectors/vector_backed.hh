@@ -71,18 +71,17 @@ namespace posets::vectors {
         std::copy (this->begin (), this->end (), v.begin ());
       }
 
+      std::ostream& print (std::ostream& os) const {
+        os << "{ ";
+        for (auto el : *this)
+          os << (int) el << " ";
+        os << "}";
+        return os;
+      }
+
     private:
       const size_t k;
   };
 
-  template <typename T>
-  inline
-  std::ostream& operator<<(std::ostream& os, const vectors::vector_backed<T>& v)
-  {
-      os << "{ ";
-      for (auto el : v)
-        os << (int) el << " ";
-      os << "}";
-      return os;
-  }
+  static_assert (Vector<vector_backed<int>>);
 }

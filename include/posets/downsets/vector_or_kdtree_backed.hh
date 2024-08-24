@@ -21,20 +21,20 @@
 
 namespace posets::downsets {
   // Forward definition for the operator<<s.
-  template <typename>
+  template <Vector>
   class vector_or_kdtree_backed;
 
-  template <typename Vector>
-  std::ostream& operator<<(std::ostream& os, const vector_or_kdtree_backed<Vector>& f);
+  template <Vector V>
+  std::ostream& operator<<(std::ostream& os, const vector_or_kdtree_backed<V>& f);
 
-  template <typename Vector>
+  template <Vector V>
   class vector_or_kdtree_backed {
     private:
-      std::unique_ptr<vector_backed<Vector>> vector;
-      std::unique_ptr<kdtree_backed<Vector>> kdtree;
+      std::unique_ptr<vector_backed<V>> vector;
+      std::unique_ptr<kdtree_backed<V>> kdtree;
 
-      template <typename V>
-      friend std::ostream& operator<<(std::ostream& os, const vector_or_kdtree_backed<V>& f);
+      template <Vector V2>
+      friend std::ostream& operator<<(std::ostream& os, const vector_or_kdtree_backed<V2>& f);
 
       size_t dim () {
         if (this->vector != nullptr)
@@ -62,7 +62,7 @@ namespace posets::downsets {
           assert (other.vector == nullptr);
           // this costs linear time already: reinterpret the kdtree as a
           // vector
-          vector_backed<Vector> B = vector_backed<Vector> (std::move (other.kdtree->tree.vector_set));
+          vector_backed<V> B = vector_backed<V> (std::move (other.kdtree->tree.vector_set));
           if (inter)
             this->vector->intersect_with (std::move (B));
           else
@@ -71,7 +71,7 @@ namespace posets::downsets {
           // case 3. again reinterpret kdtree as vector
           assert (other.vector != nullptr);
           assert (this->vector == nullptr);
-          this->vector = std::make_unique<vector_backed<Vector>> (std::move (this->kdtree->tree.vector_set));
+          this->vector = std::make_unique<vector_backed<V>> (std::move (this->kdtree->tree.vector_set));
           this->kdtree = nullptr;
           if (inter)
             this->vector->intersect_with (std::move (*(other.vector)));
@@ -95,9 +95,9 @@ namespace posets::downsets {
             else
               this->kdtree->union_with (std::move (*(other.kdtree)));
           } else {
-            this->vector = std::make_unique<vector_backed<Vector>> (std::move (this->kdtree->tree.vector_set));
+            this->vector = std::make_unique<vector_backed<V>> (std::move (this->kdtree->tree.vector_set));
             this->kdtree = nullptr;
-            vector_backed<Vector> B = vector_backed<Vector> (std::move (other.kdtree->tree.vector_set));
+            vector_backed<V> B = vector_backed<V> (std::move (other.kdtree->tree.vector_set));
             if (inter)
               this->vector->intersect_with (std::move (B));
             else
@@ -113,18 +113,18 @@ namespace posets::downsets {
         data_do (std::cout << "|VEKD: downset_size="
                          << dim << "," << m << "|" << std::endl);
         if (this->kdtree == nullptr && KD_THRESH(m, dim)) {
-          this->kdtree = std::make_unique<kdtree_backed<Vector>> (std::move (this->vector->vector_set));
+          this->kdtree = std::make_unique<kdtree_backed<V>> (std::move (this->vector->vector_set));
           this->vector = nullptr;
           data_do (std::cout << "VEKD: upgraded to kd-tree downset" << std::endl);
         }
       }
 
     public:
-      typedef Vector value_type;
+      typedef V value_type;
 
       vector_or_kdtree_backed () = delete;
 
-      vector_or_kdtree_backed (std::vector<Vector>&& elements) noexcept {
+      vector_or_kdtree_backed (std::vector<V>&& elements) noexcept {
         assert (elements.size() > 0);
         size_t m = elements.size ();
         size_t dim = elements[0].size ();
@@ -136,26 +136,26 @@ namespace posets::downsets {
         // size by removing dominated elements... it's easier and clearer
         // to do the check here though
         if (KD_THRESH(m, dim)) {
-          this->kdtree = std::make_unique<kdtree_backed<Vector>> (std::move (elements));
+          this->kdtree = std::make_unique<kdtree_backed<V>> (std::move (elements));
           data_do (std::cout << "VEKD: created kd-tree downset" << std::endl);
         } else {
-          this->vector = std::make_unique<vector_backed<Vector>> (std::move (elements));
+          this->vector = std::make_unique<vector_backed<V>> (std::move (elements));
           data_do (std::cout << "VEKD: created vector downset" << std::endl);
         }
       }
 
-      vector_or_kdtree_backed (Vector&& el) {
+      vector_or_kdtree_backed (V&& el) {
         // too small, just use a vector
-        this->vector = std::make_unique<vector_backed<Vector>> (std::move (el));
+        this->vector = std::make_unique<vector_backed<V>> (std::move (el));
       }
 
       template <typename F>
       auto apply (const F& lambda) const {
-        const std::vector<Vector>& backing_vector =
+        const std::vector<V>& backing_vector =
           this->kdtree != nullptr ?
           this->kdtree->tree.vector_set :
           this->vector->vector_set;
-        std::vector<Vector> ss;
+        std::vector<V> ss;
         ss.reserve (backing_vector.size ());
 
         for (const auto& v : backing_vector)
@@ -169,7 +169,7 @@ namespace posets::downsets {
       vector_or_kdtree_backed& operator= (const vector_or_kdtree_backed&) = delete;
       vector_or_kdtree_backed& operator= (vector_or_kdtree_backed&&) = default;
 
-      bool contains (const Vector& v) const {
+      bool contains (const V& v) const {
         if (this->kdtree != nullptr)
           return this->kdtree->contains (v);
         else
@@ -208,8 +208,8 @@ namespace posets::downsets {
                                           this->vector->end (); }
   };
 
-  template <typename Vector>
-  inline std::ostream& operator<<(std::ostream& os, const vector_or_kdtree_backed<Vector>& f) {
+  template <Vector V>
+  inline std::ostream& operator<<(std::ostream& os, const vector_or_kdtree_backed<V>& f) {
     if (f.kdtree != nullptr)
       os << *(f.kdtree) << std::endl;
     else

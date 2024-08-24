@@ -9,17 +9,17 @@
 #include <cstdlib>
 
 namespace posets::downsets {
-  template <typename Vector>
+  template <Vector V>
   class vector_backed_bin {
     public:
-      typedef Vector value_type;
+      typedef V value_type;
 
-      vector_backed_bin (Vector&& v) {
+      vector_backed_bin (V&& v) {
         vector_set.resize (v.size ());
         insert (std::move (v));
       }
 
-      vector_backed_bin (std::vector<Vector>&& elements) noexcept {
+      vector_backed_bin (std::vector<V>&& elements) noexcept {
         assert (elements.size() > 0);
         vector_set.resize (elements[0].size ());
         for (auto&& e : elements)
@@ -39,7 +39,7 @@ namespace posets::downsets {
 
       bool operator== (const vector_backed_bin& other) = delete;
 
-      bool contains (const Vector& v) const {
+      bool contains (const V& v) const {
         size_t bin = bin_of (v);
 
         if (bin >= vector_set.size ())
@@ -55,7 +55,7 @@ namespace posets::downsets {
         return _size;
       }
 
-      inline bool insert (Vector&& v, bool antichain = true) {
+      inline bool insert (V&& v, bool antichain = true) {
         size_t bin = bin_of (v);
 
         if (antichain) {
@@ -121,7 +121,7 @@ namespace posets::downsets {
             // These can dominate x
             for (size_t i = bin; i < other.vector_set.size (); ++i) {
               for (auto&& el : other.vector_set[i]) {
-                Vector&& v = x.meet (el);
+                V&& v = x.meet (el);
                 if (v == x)
                   dominated = true;
                 // TODO ("Check v == el too?  See if this is good tradeoff.");
@@ -138,7 +138,7 @@ namespace posets::downsets {
             // These cannot dominate x
             for (ssize_t i = std::min (bin, other.vector_set.size () - 1); i >= 0; --i) {
               for (auto&& it = other.vector_set[i].begin (); it != other.vector_set[i].end (); /* in-body */) {
-                Vector&& v = x.meet (*it);
+                V&& v = x.meet (*it);
                 if (v == *it) {
                   intersection.insert (std::move (v));
                   if (it != other.vector_set[i].end () - 1)
@@ -272,21 +272,21 @@ namespace posets::downsets {
       }
 
     private:
-      using vector_set_t = std::vector<std::vector<Vector>>;
+      using vector_set_t = std::vector<std::vector<V>>;
       vector_set_t vector_set; // [n] -> all the vectors with v.bin() = n
       size_t _size = 0;
 
       // Surely: if bin_of (u) > bin_of (v), then v can't dominate u.
-      size_t bin_of (const Vector& v) const {
-        if constexpr (vectors::has_bin<Vector>::value)
+      size_t bin_of (const V& v) const {
+        if constexpr (vectors::has_bin<V>::value)
           return v.bin ();
         return 0;
       }
   };
 
-  template <typename Vector>
+  template <Vector V>
   inline
-  std::ostream& operator<<(std::ostream& os, const vector_backed_bin<Vector>& f)
+  std::ostream& operator<<(std::ostream& os, const vector_backed_bin<V>& f)
   {
     for (auto&& el : f)
       os << el << std::endl;

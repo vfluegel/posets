@@ -11,7 +11,7 @@ namespace posets::vectors {
   // rest as bool.  This is this threshold:
   extern size_t bitset_threshold;
 
-  // Vectors implementing bin() should satisfy:
+  // Vs implementing bin() should satisfy:
   //       if u.bin () < v.bin (), then u can't dominate v.
   // or equivalently:
   //       if u dominates v, then u.bin () >= v.bin ()
