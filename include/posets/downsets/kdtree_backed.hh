@@ -37,33 +37,44 @@ namespace posets::downsets {
       };
 
       void inline resetTree (std::vector<V>&& elements) noexcept {
-        // sort everything
-        std::sort (elements.begin (),
-                   elements.end (),
-                   [] (const V& v1, const V& v2) {
-                     // TODO Is that the right thing to do?  It's very costly.
-                     return v1.partial_order (v2).leq ();
+        std::vector<V*> pelements;
+        for (auto& e : elements) pelements.push_back (&e);
+
+        std::sort (pelements.begin (),
+                   pelements.end (),
+                   // A strict total order.
+                   [] (V* v1, V* v2) {
+                     // A quite costly thing to do.
+                     for (size_t i = 0; i < v1->size (); ++i) {
+                       if ((*v1)[i] > (*v2)[i])
+                         return false;
+                       if ((*v1)[i] < (*v2)[i])
+                         return true;
+                      }
+                     // Equal MUST return false.
+                     return false;
                    });
+
         // then remove duplicates
-        size_t dups_pos = elements.size ();
-        for (size_t i = elements.size () - 1; i > 0; --i)
-          if (elements[i] == elements[i - 1])
-            std::swap (elements[i], elements[--dups_pos]);
-        if (dups_pos != elements.size ())
-          elements.erase (elements.begin () + dups_pos, elements.end ());
+        size_t dups_pos = pelements.size ();
+        for (size_t i = pelements.size () - 1; i > 0; --i)
+          if (*pelements[i] == *pelements[i - 1])
+            std::swap (pelements[i], pelements[--dups_pos]);
+        if (dups_pos != pelements.size ())
+          pelements.erase (pelements.begin () + dups_pos, pelements.end ());
 
         // now, we can make a tree out of the set to eliminate dominated
         // elements
-        this->tree = utils::kdtree<V> (std::move (elements));
+        this->tree = utils::kdtree<V> (std::move (pelements), proj ());
 
         auto antichain = std::vector<V*> ();
-        antichain.reserve (elements.size ());
+        antichain.reserve (pelements.size ());
+
         for (V& e : this->tree)
-          if (!this->tree.dominates (e, true))
+          if (not this->tree.dominates (e, true))
             antichain.push_back (&e);
 
-        this->tree = utils::kdtree<V> (
-          std::move (antichain), proj ());
+        this->tree = utils::kdtree<V> (std::move (antichain), proj ());
         assert (this->tree.is_antichain ());
       }
 
