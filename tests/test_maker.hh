@@ -32,7 +32,13 @@ struct template_type_list;
 static std::set<std::string> set_names, vector_names;
 
 #define typestring(T)                                                   \
-  ([] () -> std::string { int _; return abi::__cxa_demangle (typeid(T).name (), 0, 0, &_); }) ()
+  ([] () -> std::string {                                               \
+    int _;                                                              \
+    char* s = abi::__cxa_demangle (typeid(T).name (), 0, 0, &_);        \
+    std::string ret (s);                                                \
+    free (s);                                                           \
+    return ret;                                                         \
+    }) ()
 
 namespace posets::downsets {
   template <typename VecType>
