@@ -53,10 +53,6 @@ namespace posets::vectors {
 
       self& operator= (const self& other) = delete;
 
-      static constexpr size_t capacity_for (size_t elts) {
-        return elts;
-      }
-
       void to_vector (std::span<T> v) const {
         assert (v.size () >= k);
         std::copy (this->begin (), &(*this)[k], v.data ());
@@ -118,6 +114,17 @@ namespace posets::vectors {
 
     private:
       const size_t k;
+  };
+
+  template <typename T>
+  concept ArrayBacked = requires (T&& u) { new array_backed_ (std::move (u)); };
+
+  template <template <typename, size_t> typename S, typename T>
+  requires ArrayBacked<S<T, 64>>
+  struct traits<S, T> {
+      static constexpr auto capacity_for (size_t elts) {
+        return (elts + T_PER_UNIT - 1) / T_PER_UNIT;
+      }
   };
 
   static_assert (Vector<array_backed<int, 128>>);

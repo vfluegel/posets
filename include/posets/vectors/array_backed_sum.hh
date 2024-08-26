@@ -178,5 +178,16 @@ namespace posets::vectors {
       int sum = 0;
   };
 
+  template <typename T>
+  concept ArrayBackedSum = requires (T&& u) { new array_backed_sum_ (std::move (u)); };
+
+  template <template <typename, size_t> typename S, typename T>
+  requires ArrayBackedSum<S<T, 64>>
+  struct traits<S, T> {
+      static constexpr auto capacity_for (size_t elts) {
+        return (elts + T_PER_UNIT - 1) / T_PER_UNIT;
+      }
+  };
+
   static_assert (Vector<array_backed_sum<int, 128>>);
 }

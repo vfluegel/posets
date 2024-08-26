@@ -15,6 +15,12 @@ namespace posets::vectors {
       using self = simd_vector_backed<T>;
       using traits = utils::simd_traits<T>;
       static const auto simd_size = traits::simd_size;
+      using data_t = std::vector<typename traits::fssimd>;
+
+    private:
+      // Accessors for po.
+      data_t& get_data () { return data; }
+      const data_t& get_data () const { return data; }
 
     public:
       using value_type = T;
@@ -32,7 +38,7 @@ namespace posets::vectors {
           sum += c;
         data.back () ^= data.back ();
         // Trust memcpy to DTRT.
-        std::memcpy ((char*) data.data (), (char*) v.data (), v.size ());
+        std::memcpy ((char*) data.data (), (char*) v.data (), v.size () * sizeof (T));
       }
 
 
@@ -61,7 +67,7 @@ namespace posets::vectors {
       }
 
       void to_vector (std::span<T> v) const {
-        memcpy ((char*) v.data (), (char*) data.data (), data.size () * simd_size);
+        std::memcpy ((char*) v.data (), (char*) data.data (), k * sizeof (T));
       }
 
       inline auto partial_order (const self& rhs) const {
@@ -139,15 +145,8 @@ namespace posets::vectors {
     private:
       friend simd_po_res<self>;
       const size_t k, nsimds;
-      std::vector<typename traits::fssimd> data;
+      data_t data;
       int sum = 0;
-  };
-
-  template <typename T>
-  struct traits<simd_vector_backed, T> {
-      static constexpr auto capacity_for (size_t elts) {
-        return utils::simd_traits<T>::capacity_for (elts);
-      }
   };
 
   static_assert (Vector<simd_vector_backed<int>>);

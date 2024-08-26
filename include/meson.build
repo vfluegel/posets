@@ -18,10 +18,7 @@ header_files = [
   'posets/vectors/array_backed_sum.hh',
   'posets/vectors/array_ptr_backed.hh',
   'posets/vectors/simd_array_backed.hh',
-  'posets/vectors/simd_array_backed_sum.hh',
-  'posets/vectors/simd_array_ptr_backed.hh',
   'posets/vectors/simd_po_res.hh',
-  'posets/vectors/simd_po_res_sum.hh',
   'posets/vectors/simd_vector_backed.hh',
   'posets/vectors/vector_backed.hh',
   'posets/vectors.hh'

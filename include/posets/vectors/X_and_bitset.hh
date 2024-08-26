@@ -85,6 +85,7 @@ namespace posets::vectors {
       class po_res {
         public:
           po_res (const X_and_bitset& lhs, const X_and_bitset& rhs) {
+            // Note that we are putting the bitset first in that comparison.
             bgeq = (lhs.sum >= rhs.sum);
             bleq = (lhs.sum <= rhs.sum);
 
@@ -153,7 +154,7 @@ namespace posets::vectors {
         // Even if X doesn't have bin (), our local sum is valid, in that:
         //   if u dominates v, then in particular, it dominates it over the boolean part, so u.sum >= v.sum.
         if constexpr (has_bin<X>::value)
-                       bitset_bin += x.bin ();
+          bitset_bin += x.bin ();
 
         return bitset_bin;
       }

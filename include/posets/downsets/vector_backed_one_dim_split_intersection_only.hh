@@ -87,7 +87,7 @@ namespace posets::downsets {
         public:
           bool operator() (const RefVec& v1, const RefVec& v2) const {
             utils::vector_mm<typename V::value_type> v (v1.get ().size ());
-            v.reserve (V::capacity_for (v.size ()));
+            v.reserve (v.size ());
 
             v2.get ().to_vector (v);
             v[0] = v1.get ()[0];
