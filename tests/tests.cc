@@ -356,17 +356,22 @@ void usage (const char* progname) {
 
 namespace posets::vectors {
   template <typename T>
-  using simd_array_backed_sum_fixed = posets::vectors::simd_array_backed_sum<T, 10>;
-
-  template <typename T>
-  using simd_array_backed_fixed = posets::vectors::simd_array_backed<T, 10>;
-
-  template <typename T>
   using array_backed_fixed = posets::vectors::array_backed<T, 10>;
 
   template <typename T>
   using array_backed_sum_fixed = posets::vectors::array_backed_sum<T, 10>;
 
+  template <typename T>
+  using simd_array_backed_fixed = posets::vectors::simd_array_backed<T, 10>;
+
+  template <typename T>
+  using simd_array_ptr_backed_fixed = posets::vectors::simd_array_ptr_backed<T, 10>;
+
+  template <typename T>
+  using simd_array_backed_sum_fixed = posets::vectors::simd_array_backed_sum<T, 10>;
+
+  template <typename T>
+  using simd_array_ptr_backed_sum_fixed = posets::vectors::simd_array_ptr_backed_sum<T, 10>;
 }
 
 using vector_types = type_list<posets::vectors::vector_backed<char>,
@@ -374,7 +379,9 @@ using vector_types = type_list<posets::vectors::vector_backed<char>,
                                posets::vectors::array_backed_sum_fixed<char>,
                                posets::vectors::simd_vector_backed<char>,
                                posets::vectors::simd_array_backed_fixed<char>,
+                               posets::vectors::simd_array_ptr_backed_fixed<char>,
                                posets::vectors::simd_array_backed_sum_fixed<char>,
+                               posets::vectors::simd_array_ptr_backed_sum_fixed<char>,
                                posets::vectors::X_and_bitset<posets::vectors::simd_vector_backed<char>, 1>>;
 
 using set_types = template_type_list<//posets::downsets::full_set, ; too slow.

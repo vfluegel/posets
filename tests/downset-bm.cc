@@ -261,6 +261,9 @@ namespace posets::vectors {
   using simd_array_backed_fixed = posets::vectors::simd_array_backed<T, DIMENSION>;
 
   template <typename T>
+  using simd_array_backed_sum_fixed = posets::vectors::simd_array_backed_sum<T, DIMENSION>;
+
+  template <typename T>
   using simd_array_ptr_backed_fixed = posets::vectors::simd_array_ptr_backed<T, DIMENSION>;
 }
 
@@ -269,6 +272,7 @@ using vector_types = type_list<
   posets::vectors::array_ptr_backed_fixed<test_value_type>,
   posets::vectors::simd_array_backed_fixed<test_value_type>,
   posets::vectors::simd_array_ptr_backed_fixed<test_value_type>,
+  posets::vectors::simd_array_backed_sum_fixed<test_value_type>,
   posets::vectors::vector_backed<test_value_type>,
   posets::vectors::simd_vector_backed<test_value_type>>;
 
@@ -344,6 +348,8 @@ int main (int argc, char* argv[]) {
           optarg = comma ? comma + 1 : NULL;
         }
         break;
+      default:
+        usage (prog);
     }
   }
 
