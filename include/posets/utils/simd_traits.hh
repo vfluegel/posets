@@ -13,12 +13,8 @@ namespace posets::utils {
         std::experimental::simd_size_v<Elt>;
 #endif
 
-      static constexpr auto nsimds (size_t k) {
+      static constexpr auto simds_for (size_t k) {
         return (k + simd_size - 1) / simd_size;
-      }
-
-      static constexpr auto capacity_for (size_t nelts) {
-        return nsimds (nelts) * simd_size;
       }
 
       static constexpr auto alignment () {

@@ -72,10 +72,6 @@ namespace posets::vectors {
 
       X_and_bitset& operator= (const X_and_bitset& other) = delete;
 
-      static size_t capacity_for (size_t elts) {
-        return std::max (X::capacity_for (bitset_threshold), elts);
-      }
-
       void to_vector (std::span<value_type> v) const {
         x.to_vector (std::span (v.data (), bitset_threshold));
         for (size_t i = bitset_threshold; i < k; ++i)
@@ -184,6 +180,4 @@ namespace posets::vectors {
       X_and_bitset copy () const { return X::copy (); }
       X_and_bitset meet (const X_and_bitset& other) const { return X::meet (other); }
   };
-
-  static_assert (Vector<X_and_bitset<vector_backed<int>, 128>>);
 }

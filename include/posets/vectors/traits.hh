@@ -24,12 +24,4 @@ namespace posets::vectors {
   /// First argument of T is a type, the rest are literals.
   template <template <typename, auto...> typename T, typename Elt>
   struct traits;
-
-  /// This implementation covers the case where T can be instantiated with a
-  /// single type argument, by delegating to the class.
-  template <template <typename, auto...> typename T, typename Elt>
-  requires requires { new T<Elt> (64); }
-  struct traits<T, Elt> {
-      static constexpr auto capacity_for (size_t nelts) { return T<Elt>::capacity_for (nelts); }
-  };
 }

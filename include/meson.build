@@ -14,13 +14,10 @@ header_files = [
   'posets/utils/ref_ptr_cmp.hh',
   'posets/utils/simd_traits.hh',
   'posets/utils/vector_mm.hh',
-  'posets/vectors/array_backed.hh',
-  'posets/vectors/array_backed_sum.hh',
-  'posets/vectors/array_ptr_backed.hh',
-  'posets/vectors/simd_array_backed.hh',
-  'posets/vectors/simd_po_res.hh',
-  'posets/vectors/simd_vector_backed.hh',
-  'posets/vectors/vector_backed.hh',
+  'posets/vectors/generic.hh',
+  'posets/vectors/generic_partial_order.hh',
+  'posets/vectors/generic_helpers.hh',
+  'posets/vectors/X_and_bitset.hh',
   'posets/vectors.hh'
 ]
 

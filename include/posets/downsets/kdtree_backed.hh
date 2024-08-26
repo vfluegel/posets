@@ -43,7 +43,7 @@ namespace posets::downsets {
         std::sort (pelements.begin (),
                    pelements.end (),
                    // A strict total order.
-                   [] (V* v1, V* v2) {
+                   [] (const V* v1, const V* v2) {
                      // A quite costly thing to do.
                      for (size_t i = 0; i < v1->size (); ++i) {
                        if ((*v1)[i] > (*v2)[i])

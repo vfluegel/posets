@@ -4,7 +4,7 @@
 #include <string>
 
 #include <posets/utils/kdtree.hh>
-#include <posets/vectors/vector_backed.hh>
+#include <posets/vectors.hh>
 #include <posets/downsets/kdtree_backed.hh>
 
 namespace utils = posets::utils;
