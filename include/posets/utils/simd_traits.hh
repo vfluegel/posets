@@ -17,10 +17,9 @@ namespace posets::utils {
         return (k + simd_size - 1) / simd_size;
       }
 
-      static constexpr auto alignment () {
-        return simd_size * sizeof (Elt);
-      }
-
       using fssimd = std::experimental::fixed_size_simd<Elt, simd_size>;
+
+      static constexpr auto memory_alignment_v =
+        std::experimental::memory_alignment_v<fssimd>;
   };
 }

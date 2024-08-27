@@ -8,5 +8,5 @@
 
 namespace posets::utils {
   template <typename T>
-  using vector_mm = std::vector<T, boost::alignment::aligned_allocator<T, simd_traits<T>::alignment ()>>;
+  using vector_mm = std::vector<T, boost::alignment::aligned_allocator<T, simd_traits<T>::memory_alignment_v>>;
 }
