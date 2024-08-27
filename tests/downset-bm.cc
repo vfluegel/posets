@@ -267,14 +267,14 @@ namespace posets::vectors {
   using simd_array_ptr_backed_fixed = posets::vectors::simd_array_ptr_backed<T, DIMENSION>;
 }
 
-using vector_types = type_list<
+VECTOR_TYPES (
   posets::vectors::array_backed_fixed<test_value_type>,
   posets::vectors::array_ptr_backed_fixed<test_value_type>,
   posets::vectors::simd_array_backed_fixed<test_value_type>,
   posets::vectors::simd_array_ptr_backed_fixed<test_value_type>,
   posets::vectors::simd_array_backed_sum_fixed<test_value_type>,
   posets::vectors::vector_backed<test_value_type>,
-  posets::vectors::simd_vector_backed<test_value_type>>;
+  posets::vectors::simd_vector_backed<test_value_type>);
 
 using set_types = template_type_list<
   posets::downsets::kdtree_backed,

@@ -372,17 +372,25 @@ namespace posets::vectors {
 
   template <typename T>
   using simd_array_ptr_backed_sum_fixed = posets::vectors::simd_array_ptr_backed_sum<T, 10>;
+
+  template <typename T>
+  using simd_vector_and_bitset_backed = posets::vectors::X_and_bitset<posets::vectors::simd_vector_backed<T>, 1>;
 }
 
-using vector_types = type_list<posets::vectors::vector_backed<char>,
-                               posets::vectors::array_backed_fixed<char>,
-                               posets::vectors::array_backed_sum_fixed<char>,
-                               posets::vectors::simd_vector_backed<char>,
-                               posets::vectors::simd_array_backed_fixed<char>,
-                               posets::vectors::simd_array_ptr_backed_fixed<char>,
-                               posets::vectors::simd_array_backed_sum_fixed<char>,
-                               posets::vectors::simd_array_ptr_backed_sum_fixed<char>,
-                               posets::vectors::X_and_bitset<posets::vectors::simd_vector_backed<char>, 1>>;
+#define DEFINE_VECTOR_NAME(V) template <> struct vector_name<V> { static constexpr auto str = #V; };
+#define DEFINE_VECTOR_NAMES(...)
+#define VECTOR_TYPES(...) FOR_EACH(DEFINE_VECTOR_NAME, __VA_ARGS__)     \
+  using vector_types = type_list<__VA_ARGS__>;
+
+VECTOR_TYPES (posets::vectors::vector_backed<char>,
+              posets::vectors::array_backed_fixed<char>,
+              posets::vectors::array_backed_sum_fixed<char>,
+              posets::vectors::simd_vector_backed<char>,
+              posets::vectors::simd_array_backed_fixed<char>,
+              posets::vectors::simd_array_ptr_backed_fixed<char>,
+              posets::vectors::simd_array_backed_sum_fixed<char>,
+              posets::vectors::simd_array_ptr_backed_sum_fixed<char>,
+              posets::vectors::simd_vector_and_bitset_backed<char>);
 
 using set_types = template_type_list<//posets::downsets::full_set, ; too slow.
   posets::downsets::kdtree_backed,
@@ -402,7 +410,7 @@ int main(int argc, char* argv[]) {
     usage (argv[0]);
 
   auto implem = std::string ("posets::downsets::") + argv[1]
-    + "<posets::vectors::" + argv[2] + (argv[2][strlen (argv[2]) - 1] == '>' ? " " : "") + ">";
+    + "<posets::vectors::" + argv[2] + ">";
 
   try {
     posets::vectors::bool_threshold = 128;

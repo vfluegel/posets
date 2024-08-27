@@ -9,6 +9,20 @@
 
 #include <posets/concepts.hh>
 
+/// FOREACH
+#define PARENS ()
+#define EXPAND(arg) EXPAND1(EXPAND1(EXPAND1(EXPAND1(arg))))
+#define EXPAND1(arg) EXPAND2(EXPAND2(EXPAND2(EXPAND2(arg))))
+#define EXPAND2(arg) EXPAND3(EXPAND3(EXPAND3(EXPAND3(arg))))
+#define EXPAND3(arg) EXPAND4(EXPAND4(EXPAND4(EXPAND4(arg))))
+#define EXPAND4(arg) arg
+#define FOR_EACH(macro, ...)                                    \
+  __VA_OPT__(EXPAND(FOR_EACH_HELPER(macro, __VA_ARGS__)))
+#define FOR_EACH_HELPER(macro, a1, ...)                         \
+  macro(a1)                                                     \
+  __VA_OPT__(FOR_EACH_AGAIN PARENS (macro, __VA_ARGS__))
+#define FOR_EACH_AGAIN() FOR_EACH_HELPER
+
 template <typename SetType>
 class test_t;
 
@@ -29,33 +43,58 @@ struct type_list;
 template <template <typename Arg> typename... Types>
 struct template_type_list;
 
+template <typename T> struct vector_name;
 static std::set<std::string> set_names, vector_names;
 
-#define typestring(T)                                                   \
+
+#define get_vector_name(V) std::string {vector_name<V>::str}
+#define get_set_name(S)                                                 \
   ([] () -> std::string {                                               \
     int _;                                                              \
-    char* s = abi::__cxa_demangle (typeid(T).name (), 0, 0, &_);        \
+    char* s = abi::__cxa_demangle (typeid(S).name (), 0, 0, &_);        \
     std::string ret (s);                                                \
     free (s);                                                           \
-    return ret;                                                         \
+    return ret.substr (0, ret.find_first_of ('<'));                     \
     }) ()
+
+template <typename S>
+struct full_name;
+
+template <template <typename> typename S, typename V>
+struct full_name<S<V>> {
+    static auto get () {
+      return get_set_name (S<V>) + "<" + get_vector_name (V) + ">";
+    }
+};
+#define get_full_name(S) full_name<S>::get ()
+
+#define DEFINE_VECTOR_NAME(V) template <> struct vector_name<V> { static constexpr auto str = #V; };
+#define DEFINE_VECTOR_NAMES(...)
+#define VECTOR_TYPES(...) FOR_EACH(DEFINE_VECTOR_NAME, __VA_ARGS__)     \
+  using vector_types = type_list<__VA_ARGS__>;
 
 namespace posets::downsets {
   template <typename VecType>
   struct all {};
 }
+
 namespace posets::vectors {
   struct all {};
 }
+
+template <>
+struct vector_name<posets::vectors::all> {
+    static constexpr auto str = "posets::vectors::all";
+};
 
 // One set, one vector
 template <bool CreateAll = true,
           template <typename V> typename SetType, typename VecType>
 void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
-  vector_names.insert (typestring (VecType));
+  vector_names.insert (vector_name<VecType>::str);
 
   using res_t = decltype(std::declval<test_t<SetType<VecType>>> () ());
-  auto ts = typestring (SetType<VecType>);
+  auto ts = get_full_name (SetType<VecType>);
   auto test = [ts] () {
     std::cout << "[--] running tests for " << ts << std::endl << std::flush;
     if constexpr (std::is_same_v<res_t, void>) {
@@ -73,13 +112,12 @@ void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
   tests[ts] = test;
 
   if constexpr (CreateAll) {
-    auto setallvec = typestring (SetType<VecType>);
-    setallvec = setallvec.substr (0, setallvec.find_first_of ('<')) + "<posets::vectors::all>";
+    auto setallvec = get_set_name (SetType<VecType>) + "<posets::vectors::all>";
 
     for (auto&& ts : {
-        typestring (posets::downsets::all<VecType>),
+        get_full_name (posets::downsets::all<VecType>),
         setallvec,
-        typestring (posets::downsets::all<posets::vectors::all>)
+        get_full_name (posets::downsets::all<posets::vectors::all>)
       }) {
       auto prev = tests[ts];
       tests[ts] = [prev, test] () {
@@ -94,8 +132,7 @@ void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
 template <bool CreateAll = true,
           template <typename V> typename SetType, typename VecType, typename VecType2, typename... VecTypes>
 void register_maker (type_list<VecType, VecType2, VecTypes...>*, SetType<VecType>* = 0) {
-  auto s = typestring (SetType<VecType>);
-  set_names.insert (s.substr (0, s.find_first_of ('<')));
+  set_names.insert (get_set_name (SetType<VecType>));
   register_maker<CreateAll, SetType> ((type_list<VecType>*) 0);
   register_maker<CreateAll, SetType> ((type_list<VecType2, VecTypes...>*) 0);
 }
