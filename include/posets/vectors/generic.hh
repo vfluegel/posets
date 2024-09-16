@@ -56,7 +56,7 @@ namespace posets::vectors {
           return _data->data ();
       }
 
-      const size_t data_size () const {
+      size_t data_size () const {
         if constexpr (embeds_data) return _data.size (); else return _data->size ();
       }
 
