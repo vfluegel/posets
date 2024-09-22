@@ -10,6 +10,7 @@
 #include <numeric>
 #include <stack>
 #include <vector>
+#include <cmath>
 
 #include <posets/concepts.hh>
 
@@ -63,9 +64,11 @@ namespace posets::utils {
                        const std::vector<size_t>::iterator& end_it,
                        size_t length, size_t axis) {
         // sanity checks
+        std::cout << "size = " << this->vector_set.size ()
+                  << " result = " << result << std::endl;
         assert (this->tree != nullptr);
-        assert (this->vector_set.size () > result);
-        assert (static_cast<size_t>(std::distance (begin_it, end_it)) == length);
+        assert (static_cast<size_t> (4 << (int)(std::floor (std::log2 (this->vector_set.size ())))) > result);
+        assert (static_cast<size_t> (std::distance (begin_it, end_it)) == length);
         assert (length > 0);
         assert (axis < this->dim);
 
@@ -135,7 +138,7 @@ namespace posets::utils {
                                 int* lbounds, size_t dims_to_dom) const {
         // sanity checks
         assert (this->tree != nullptr);
-        assert (node_idx < this->vector_set.size ());
+        assert (static_cast<size_t> (4 << (int)(std::floor (std::log2 (this->vector_set.size ())))) > node_idx);
         assert (dims_to_dom > 0);
 
         // from index to node pointer
@@ -203,7 +206,13 @@ namespace posets::utils {
         std::vector<size_t> points (this->vector_set.size ());
         std::iota (points.begin (), points.end (), 0);
 
-        this->tree = new kdtree_node[2 * elements.size ()];
+        // Let n be the size of vector_set, the no. of leaves in the tree is
+        // 2^{floor(lg(n)) + 1}, so this times 2 is the size of the full
+        // binary tree we will be labelling
+        size_t tsize = 4 << (size_t)(std::floor (std::log2 (this->vector_set.size ())));
+        std::cout << "set size = " << this->vector_set.size ()
+                  << " and tsize = " << tsize << std::endl;
+        this->tree = new kdtree_node[tsize];
         recursive_build (0, points.begin (), points.end (),
                          points.size (), 0);
       }
