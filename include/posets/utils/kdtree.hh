@@ -131,10 +131,15 @@ namespace posets::utils {
        * region is not yet dominating the region of v
        */
       bool recursive_dominates (const V& v, bool strict,
-                                kdtree_node_ptr node,
+                                size_t node_idx,
                                 int* lbounds, size_t dims_to_dom) const {
-        assert (node != nullptr);
+        // sanity checks
+        assert (this->tree != nullptr);
+        assert (node_idx < this->vector_set.size ());
         assert (dims_to_dom > 0);
+
+        // from index to node pointer
+        kdtree_node_ptr node = this->tree + node_idx;
 
         // if we are at a leaf, just check if it dominates
         if (node->value_idx) {
@@ -162,7 +167,7 @@ namespace posets::utils {
         lbounds[node->axis] = node->location;
 
         // if we got here, we need to check on the right recursively
-        bool r_succ = recursive_dominates (v, strict, (2 * node) + 2, lbounds, still_to_dom);
+        bool r_succ = recursive_dominates (v, strict, (2 * node_idx) + 2, lbounds, still_to_dom);
         if (r_succ) return true;
 
         // all that's left is to check on the left recursively, if pertinent
@@ -172,7 +177,7 @@ namespace posets::utils {
           return false;
         }
         // it is pertinent after all
-        return recursive_dominates (v, strict, (2 * node) + 1, lbounds, dims_to_dom);
+        return recursive_dominates (v, strict, (2 * node_idx) + 1, lbounds, dims_to_dom);
       }
 
     public:
@@ -198,7 +203,7 @@ namespace posets::utils {
         std::vector<size_t> points (this->vector_set.size ());
         std::iota (points.begin (), points.end (), 0);
 
-        this->tree = malloc(2 * elements.size () * sizeof (kdtree_node));
+        this->tree = new kdtree_node[2 * elements.size ()];
         recursive_build (0, points.begin (), points.end (),
                          points.size (), 0);
       }
@@ -227,7 +232,7 @@ namespace posets::utils {
       bool dominates (const V& v, bool strict = false) const {
         int lbounds[this->dim];
         std::fill_n (lbounds, this->dim, std::numeric_limits<int>::min ());
-        return this->recursive_dominates (v, strict, this->tree, lbounds, this->dim);
+        return this->recursive_dominates (v, strict, 0, lbounds, this->dim);
       }
 
       bool is_antichain () const {
