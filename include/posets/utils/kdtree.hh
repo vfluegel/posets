@@ -208,7 +208,7 @@ namespace posets::utils {
                          points.size (), 0);
       }
 
-      kdtree () {} ;  // FIXME: shall we delete this? it makes a kdtree
+      kdtree () : tree (nullptr) {} ;  // FIXME: shall we delete this? it makes a kdtree
                       // without knowing the size of anything!
       kdtree (const kdtree& other) = delete;
       kdtree (kdtree&& other) : dim (other.dim),
