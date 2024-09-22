@@ -11,8 +11,6 @@
 #include <stack>
 #include <vector>
 
-#include <boost/pool/object_pool.hpp>
-
 #include <posets/concepts.hh>
 
 /*
@@ -37,54 +35,45 @@ namespace posets::utils {
       using kdtree_node_ptr = kdtree_node*;
 
       struct kdtree_node {
-          kdtree_node_ptr left;  // left child
-          kdtree_node_ptr right; // right child
-          size_t value_idx;      // only for leaves: the index of
-                                 // the element from the list
-          int location;          // the value at which we split
-          size_t axis;           // the dimension at which we
-                                 // split
-          bool clean_split;      // whether the split is s.t.
-                                 // to the left all is smaller
-
-          kdtree_node () = delete;
-
-          // constructor for leaves
-          kdtree_node (size_t idx) : left (nullptr),
-                                     right (nullptr),
-                                     value_idx (idx),
-                                     location (0),
-                                     axis (0),
-                                     clean_split (false) {}
-          // constructor for inner nodes; location, axis, and clean_split need
-          // to be set manually after that.  This is a limitation of
-          // boost::pool::construct.
-          kdtree_node (kdtree_node_ptr l,
-                       kdtree_node_ptr r) : left (l), right (r) {}
+          std::optional<size_t> value_idx;      // only for leaves: the index of
+                                                // the element from the list
+          int location;                         // the value at which we split
+          size_t axis;                          // the dimension at which we
+                                                // split
+          bool clean_split;                     // whether the split is s.t.
+                                                // to the left all is smaller
       };
 
       size_t dim;
       kdtree_node_ptr tree;
-      boost::object_pool<kdtree_node>* malloc;
 
       template <Vector V2>
       friend std::ostream& operator<< (std::ostream& os, const kdtree<V2>& f);
 
       /*
        * This is one of the only interesting parts of the code: building the
-       * kd-tree to make sure it is balanced
+       * kd-tree to make sure it is balanced.
+       *
+       * NOTE: This assumes that this->tree has been allocated enough memory to
+       * hold the whole (balanced) tree
        */
-      kdtree_node_ptr
-      recursive_build (const std::vector<size_t>::iterator& begin_it,
+      void
+      recursive_build (size_t result,  // where to leave the new tree
+                       const std::vector<size_t>::iterator& begin_it,
                        const std::vector<size_t>::iterator& end_it,
                        size_t length, size_t axis) {
+        // sanity checks
+        assert (this->tree != nullptr);
+        assert (this->vector_set.size () > result);
         assert (static_cast<size_t>(std::distance (begin_it, end_it)) == length);
         assert (length > 0);
         assert (axis < this->dim);
 
         // if the list of elements is now a singleton, we make a leaf
-        if (length == 1)
-          return malloc->construct (*begin_it);
+        if (length == 1) {
+          this->tree[result].value_idx = *begin_it;
+          return;
+        }
 
         // Use a selection algorithm to get the median
         // NOTE: we actually get the item whose index is
@@ -107,7 +96,7 @@ namespace posets::utils {
         size_t max_idx = *max_it;
         bool clean = (this->vector_set[max_idx][axis] < loc);
 
-        // some sanity checks
+        // some sanity checks about the sublists
         assert (std::distance (begin_it, median_it) > 0);
         assert (std::distance (median_it, end_it) > 0);
         assert (static_cast<size_t>(std::distance (begin_it, median_it)) == length / 2);
@@ -118,13 +107,18 @@ namespace posets::utils {
 
         // the next axis is just the following dimension, wrapping around
         size_t next_axis = (axis + 1) % this->dim;
-        auto ret = malloc->construct (
-          recursive_build (begin_it, median_it,
-                           length / 2, next_axis),
-          recursive_build (median_it, end_it,
-                           length - (length / 2), next_axis));
-        ret->location = loc; ret->axis = axis; ret->clean_split = clean;
-        return ret;
+        // we can now prepare the information of the root node and then
+        // recursively prepare the left and right children
+        this->tree[result].value_idx = std::nullopt;
+        this->tree[result].location = loc;
+        this->tree[result].axis = axis;
+        this->tree[result].clean_split = clean;
+        // now the recursive calls
+        recursive_build ((result * 2) + 1, begin_it, median_it,
+                         length / 2, next_axis);
+        recursive_build ((result * 2) + 2, median_it, end_it,
+                         length - (length / 2), next_axis);
+        return;
       }
 
       /*
@@ -143,8 +137,8 @@ namespace posets::utils {
         assert (dims_to_dom > 0);
 
         // if we are at a leaf, just check if it dominates
-        if (node->left == nullptr) {
-          auto po = v.partial_order (this->vector_set[node->value_idx]);
+        if (node->value_idx) {
+          auto po = v.partial_order (this->vector_set[*(node->value_idx)]);
           if (strict)
             return po.leq () and not po.geq ();
           else
@@ -168,7 +162,7 @@ namespace posets::utils {
         lbounds[node->axis] = node->location;
 
         // if we got here, we need to check on the right recursively
-        bool r_succ = recursive_dominates (v, strict, node->right, lbounds, still_to_dom);
+        bool r_succ = recursive_dominates (v, strict, (2 * node) + 2, lbounds, still_to_dom);
         if (r_succ) return true;
 
         // all that's left is to check on the left recursively, if pertinent
@@ -178,7 +172,7 @@ namespace posets::utils {
           return false;
         }
         // it is pertinent after all
-        return recursive_dominates (v, strict, node->left, lbounds, dims_to_dom);
+        return recursive_dominates (v, strict, (2 * node) + 1, lbounds, dims_to_dom);
       }
 
     public:
@@ -187,47 +181,46 @@ namespace posets::utils {
       // NOTE: this works for any collection of vectors, not even set assumed
       template <std::ranges::input_range R, class Proj = std::identity>
       kdtree (R&& elements, Proj proj = {}) : dim (proj (*elements.begin ()).size ()) {
-        malloc = new (std::remove_cvref_t<decltype (*malloc)>);
-        malloc->set_next_size (std::max (8192ul, 2 * elements.size ()));
-
+        // sanity checks
         assert (elements.size () > 0);
         assert (this->dim > 0);
+
+        // moving the given elements to the internal data structure
         vector_set.reserve (elements.size ());
         for (auto&& e : elements | std::views::reverse)
           vector_set.push_back (proj (std::move (e)));
+
         // WARNING: moved elements, so we can't really use it below! instead,
         // use this->vector_set
         assert (this->vector_set.size () > 0);
 
         // We now prepare the list of indices to include in the tree
         std::vector<size_t> points (this->vector_set.size ());
-        std::iota(points.begin (), points.end (), 0);
+        std::iota (points.begin (), points.end (), 0);
 
-        this->tree = recursive_build (points.begin (), points.end (),
-                                      points.size (), 0);
+        this->tree = malloc(2 * elements.size () * sizeof (kdtree_node));
+        recursive_build (0, points.begin (), points.end (),
+                         points.size (), 0);
       }
 
-      kdtree () : malloc (nullptr) {} ;
+      kdtree () {} ;  // FIXME: shall we delete this? it makes a kdtree
+                      // without knowing the size of anything!
       kdtree (const kdtree& other) = delete;
       kdtree (kdtree&& other) : dim (other.dim),
                                 tree (std::move (other.tree)),
-                                malloc (other.malloc),
                                 vector_set (std::move (other.vector_set)) {
         other.tree = nullptr;
-        other.malloc = nullptr;
       }
 
-      ~kdtree () { if (malloc) delete malloc; }
+      ~kdtree () { if (this->tree != nullptr) delete this->tree; }
 
       kdtree& operator= (kdtree&& other) {
-        if (malloc)
-          delete malloc;
+        if (this->tree != nullptr)
+          delete this->tree;
         dim = other.dim;
         tree = other.tree;
         vector_set = std::move (other.vector_set);
-        malloc = other.malloc;
         other.tree = nullptr;
-        other.malloc = nullptr;
         return *this;
       }
 
