@@ -5,7 +5,7 @@ project ('Posets Library', ['cpp'],
 if not meson.is_subproject()
   cpp = meson.get_compiler('cpp')
   if cpp.get_id() == 'clang'
-    extra_args = []
+    extra_args = ['-fexperimental-library']
   else
     extra_args = ['-ftrack-macro-expansion=0',
                   '-fno-diagnostics-show-caret',
