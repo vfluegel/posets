@@ -64,8 +64,6 @@ namespace posets::utils {
                        const std::vector<size_t>::iterator& end_it,
                        size_t length, size_t axis) {
         // sanity checks
-        std::cout << "size = " << this->vector_set.size ()
-                  << " result = " << result << std::endl;
         assert (this->tree != nullptr);
         assert (static_cast<size_t> (4 << (int)(std::floor (std::log2 (this->vector_set.size ())))) > result);
         assert (static_cast<size_t> (std::distance (begin_it, end_it)) == length);
@@ -210,8 +208,6 @@ namespace posets::utils {
         // 2^{floor(lg(n)) + 1}, so this times 2 is the size of the full
         // binary tree we will be labelling
         size_t tsize = 4 << (size_t)(std::floor (std::log2 (this->vector_set.size ())));
-        std::cout << "set size = " << this->vector_set.size ()
-                  << " and tsize = " << tsize << std::endl;
         this->tree = new kdtree_node[tsize];
         recursive_build (0, points.begin (), points.end (),
                          points.size (), 0);
