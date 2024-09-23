@@ -74,7 +74,6 @@ namespace posets::downsets {
     public:
 
       void union_with (const full_set& other) {
-        size_t size = vector_set.size ();
         for (auto&& el : other)
           vector_set.insert (el.copy ());
         downward_close ();
