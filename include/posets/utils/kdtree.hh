@@ -235,7 +235,7 @@ namespace posets::utils {
         // tree and before moving it to here, because of self-assignment
         // safety!
         if (this->tree != nullptr)
-          delete this->tree;
+          delete[] this->tree;
         // we now copy things here and return
         this->tree = temp_tree;
         return *this;
