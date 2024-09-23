@@ -218,10 +218,10 @@ namespace posets::utils {
       }
 
       kdtree () : tree (nullptr) {} ;  // FIXME: shall we delete this? it makes a kdtree
-                      // without knowing the size of anything!
+                                       // without knowing the size of anything!
       kdtree (const kdtree& other) = delete;
       kdtree (kdtree&& other) : dim (other.dim),
-                                tree (std::move (other.tree)),
+                                tree (other.tree),
                                 vector_set (std::move (other.vector_set)) {
         other.tree = nullptr;
       }
@@ -231,10 +231,13 @@ namespace posets::utils {
       kdtree& operator= (kdtree&& other) {
         if (this->tree != nullptr)
           delete this->tree;
-        dim = other.dim;
-        tree = other.tree;
-        vector_set = std::move (other.vector_set);
+        this->dim = other.dim;
+        this->vector_set = std::move (other.vector_set);
+        // 3 variable dance here to make the whole thing safe for
+        // self-assignment
+        kdtree_node_ptr temp_tree = other.tree;
         other.tree = nullptr;
+        this->tree = temp_tree;
         return *this;
       }
 
