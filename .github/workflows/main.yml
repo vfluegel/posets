@@ -15,6 +15,9 @@ jobs:
     - name: Setup configuration
       run: |
         meson setup build --buildtype debug
+    - name: Compile everything
+      run: |
+        cd build && meson compile
     - name: Run test
       run: |
         cd build && meson test --wrap='valgrind --error-exitcode=18 --exit-on-first-error=yes'
