@@ -21,4 +21,20 @@ namespace posets {
       { t1.to_vector (s) };
       { t1.print (os) } -> std::same_as<std::ostream&>;
   };
+
+  template <typename T, typename V = typename T::value_type>
+  concept Downset = std::ranges::range<T> and
+    not std::is_default_constructible_v<T> and
+    std::is_constructible_v<T, V&&> and
+    std::is_constructible_v<T, std::vector<V>&&> and
+    not std::is_copy_constructible_v<T> and
+    not std::is_copy_assignable_v<T> and
+    std::is_move_constructible_v<T> and
+    std::is_move_assignable_v<T> and
+    requires (T set, T set2, V vec, std::function<V (const V&)> f) {
+      { set.apply (f) } -> std::same_as<T>;
+      { set.contains (vec) } -> std::same_as<bool>;
+      set.union_with (std::move (set2));
+      set.intersect_with (std::move (set2));
+  };
 }

@@ -116,9 +116,9 @@ namespace posets::downsets {
         return res;
       }
 
-      auto        begin ()      { return vector_set.begin (); }
+      //auto        begin ()      { return vector_set.begin (); }
       const auto  begin() const { return vector_set.begin (); }
-      auto        end()         { return vector_set.end (); }
+      //auto        end()         { return vector_set.end (); }
       const auto  end() const   { return vector_set.end (); }
 
       template <Vector V2>

@@ -19,6 +19,12 @@ namespace posets::downsets {
       set_backed () {}
 
     public:
+      set_backed (std::vector<V>&& elements) {
+        for (auto&& v : elements)
+          insert (std::move (v));
+      }
+
+
       set_backed (V&& v) noexcept {
         insert (std::move (v));
       }

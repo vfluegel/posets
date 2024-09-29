@@ -249,6 +249,10 @@ namespace posets::downsets {
 
       template <typename T>
       struct iterator {
+          using value_type = T;
+          using difference_type = std::ptrdiff_t;
+
+          iterator () {}
           iterator (T first, T end) : it {first}, end {end} {
             if (it == end) return;
             sub_it = it->begin ();
@@ -256,11 +260,22 @@ namespace posets::downsets {
             stabilize ();
           }
 
-          auto operator++ () {
+          auto& operator++ () {
             ++sub_it;
             stabilize ();
+            return *this;
           }
 
+          auto operator++ (int) {
+            auto ret = iterator (*this);
+            ++sub_it;
+            stabilize ();
+            return ret;
+          }
+
+          bool operator== (const iterator& other) const {
+            return not (*this != other);
+          }
           bool operator!= (const iterator& other) const {
             return not (it == other.it and end == other.end and
                         (it == end or
