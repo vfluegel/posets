@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <span>
+#include <functional>
 
 namespace posets {
   template <typename T>
