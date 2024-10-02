@@ -36,7 +36,7 @@ namespace posets::downsets {
           V&& operator() (V*&& pv)          { return std::move (*pv); }
       };
 
-      void inline resetTree (std::vector<V>&& elements) noexcept {
+      void inline reset_tree (std::vector<V>&& elements) noexcept {
         std::vector<V*> pelements;
         for (auto& e : elements) pelements.push_back (&e);
 
@@ -65,7 +65,7 @@ namespace posets::downsets {
 
         // now, we can make a tree out of the set to eliminate dominated
         // elements
-        this->tree = utils::kdtree<V> (std::move (pelements), proj ());
+        this->tree.relabel_tree (std::move (pelements), proj ());
 
         auto antichain = std::vector<V*> ();
         antichain.reserve (pelements.size ());
@@ -74,7 +74,7 @@ namespace posets::downsets {
           if (not this->tree.dominates (e, true))
             antichain.push_back (&e);
 
-        this->tree = utils::kdtree<V> (std::move (antichain), proj ());
+        this->tree.relabel_tree (std::move (antichain), proj ());
         assert (this->tree.is_antichain ());
       }
 
@@ -84,7 +84,7 @@ namespace posets::downsets {
       kdtree_backed () = delete;
 
       kdtree_backed (std::vector<V>&& elements) noexcept {
-        resetTree (std::move (elements));
+        reset_tree (std::move (elements));
       }
 
       kdtree_backed (V&& e) :
@@ -128,9 +128,10 @@ namespace posets::downsets {
         for (auto& e : other.tree)
           if (not this->tree.dominates (e))
             result.push_back (&e);
+
+        // ready to rebuild the tree now
         assert (result.size () > 0);
-        this->tree = utils::kdtree<V> (
-          std::move (result), proj ());
+        this->tree.relabel_tree (std::move (result), proj ());
         assert (this->tree.is_antichain ());
       }
 
@@ -164,7 +165,7 @@ namespace posets::downsets {
           return;
 
         // Worst-case scenario: we do need to build trees
-        resetTree (std::move (intersection));
+        reset_tree (std::move (intersection));
       }
 
       auto size () const {

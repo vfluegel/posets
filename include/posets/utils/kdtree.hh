@@ -200,10 +200,11 @@ namespace posets::utils {
         size_t tsize = 4 << (size_t)(std::floor (std::log2 (elements.size ())));
 
         // moving the given elements to the internal data structure
-        vector_set.clear ();
-        vector_set.reserve (elements.size ());
+        std::vector<V> newset;
+        newset.reserve (elements.size ());
         for (auto&& e : elements | std::views::reverse)
-          vector_set.push_back (proj (std::move (e)));
+          newset.push_back (proj (std::move (e)));
+        this->vector_set = std::move (newset);
 
         // WARNING: moved elements, so we can't really use it below! instead,
         // use this->vector_set
@@ -228,7 +229,6 @@ namespace posets::utils {
       kdtree (size_t dim, size_t initsize) : dim (dim) {
         size_t tsize = 4 << (size_t)(std::floor (std::log2 (initsize)));
         this->tree = new kdtree_node[tsize];
-        this->vector_set.reserve (initsize);
       }
       template <std::ranges::input_range R, class Proj = std::identity>
       kdtree (R&& elements, Proj proj = {}) : dim (proj (*elements.begin ()).size ()),
