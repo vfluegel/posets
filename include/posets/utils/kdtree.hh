@@ -233,7 +233,7 @@ namespace posets::utils {
       template <std::ranges::input_range R, class Proj = std::identity>
       kdtree (R&& elements, Proj proj = {}) : dim (proj (*elements.begin ()).size ()),
                                               tree (nullptr) {
-        relabel_tree(elements, proj);
+        relabel_tree(std::move (elements), proj);
       }
 
       kdtree (const kdtree& other) = delete;
