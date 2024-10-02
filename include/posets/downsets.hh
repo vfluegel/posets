@@ -12,3 +12,17 @@
 #include <posets/downsets/vector_backed_one_dim_split.hh>
 #include <posets/downsets/vector_backed_one_dim_split_intersection_only.hh>
 #include <posets/downsets/set_backed.hh>
+
+
+#include <posets/vectors.hh>
+
+namespace posets::downsets {
+  static_assert (Downset<full_set<posets::vectors::vector_backed<int>>>);
+  static_assert (Downset<kdtree_backed<posets::vectors::vector_backed<int>>>);
+  static_assert (Downset<vector_backed<posets::vectors::vector_backed<int>>>);
+  static_assert (Downset<vector_or_kdtree_backed<posets::vectors::vector_backed<int>>>);
+  static_assert (Downset<vector_backed_bin<posets::vectors::vector_backed<int>>>);
+  static_assert (Downset<vector_backed_one_dim_split<posets::vectors::vector_backed<int>>>);
+  static_assert (Downset<vector_backed_one_dim_split_intersection_only<posets::vectors::vector_backed<int>>>);
+  static_assert (Downset<set_backed<posets::vectors::vector_backed<int>>>);
+}

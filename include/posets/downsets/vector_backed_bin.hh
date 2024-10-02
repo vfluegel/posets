@@ -227,6 +227,11 @@ namespace posets::downsets {
 
       template <typename T>
       struct iterator {
+          using value_type = T;
+          using difference_type = std::ptrdiff_t;
+
+          iterator () {}
+
           iterator (T first, T end) : it {first}, end {end} {
             if (it == end) return;
             sub_it = it->begin ();
@@ -240,11 +245,22 @@ namespace posets::downsets {
             return *this;
           }
 
+          auto operator++ (int) {
+            auto ret = iterator (*this);
+            ++sub_it;
+            stabilize ();
+            return ret;
+          }
+
           bool operator!= (const iterator& other) const {
             return not (it == other.it and end == other.end and
                         (it == end or
                          (sub_it == other.sub_it and
                           sub_end == other.sub_end)));
+          }
+
+          bool operator== (const iterator& other) const {
+            return not (*this != other);
           }
 
           auto&& operator* () const { return *sub_it;}
@@ -272,8 +288,6 @@ namespace posets::downsets {
         // Making the type explicit for clang.
         return iterator<decltype (vector_set.crbegin ())> (vector_set.crend (), vector_set.crend ());
       }
-
-    private:
       using vector_set_t = std::vector<std::vector<V>>;
       vector_set_t vector_set; // [n] -> all the vectors with v.bin() = n
       size_t _size = 0;

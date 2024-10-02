@@ -186,15 +186,25 @@ namespace posets::utils {
 
       // NOTE: this works for any collection of vectors, not even set assumed
       template <std::ranges::input_range R, class Proj = std::identity>
-      kdtree (R&& elements, Proj proj = {}) : dim (proj (*elements.begin ()).size ()) {
+      void relabel_tree (R&& elements, Proj proj = {}) {
+        this->dim = (proj (*elements.begin ()).size ());
+
         // sanity checks
         assert (elements.size () > 0);
         assert (this->dim > 0);
 
+        // Let n be the size of vector_set, the no. of leaves in the tree is
+        // 2^{floor(lg(n)) + 1}, so this times 2 is the size of the full
+        // binary tree we will be labelling
+        size_t oldsize = 4 << (size_t)(std::floor (std::log2 (this->vector_set.size ())));
+        size_t tsize = 4 << (size_t)(std::floor (std::log2 (elements.size ())));
+
         // moving the given elements to the internal data structure
-        vector_set.reserve (elements.size ());
+        std::vector<V> newset;
+        newset.reserve (elements.size ());
         for (auto&& e : elements | std::views::reverse)
-          vector_set.push_back (proj (std::move (e)));
+          newset.push_back (proj (std::move (e)));
+        this->vector_set = std::move (newset);
 
         // WARNING: moved elements, so we can't really use it below! instead,
         // use this->vector_set
@@ -203,18 +213,29 @@ namespace posets::utils {
         // We now prepare the list of indices to include in the tree
         std::vector<size_t> points (this->vector_set.size ());
         std::iota (points.begin (), points.end (), 0);
-
-        // Let n be the size of vector_set, the no. of leaves in the tree is
-        // 2^{floor(lg(n)) + 1}, so this times 2 is the size of the full
-        // binary tree we will be labelling
-        size_t tsize = 4 << (size_t)(std::floor (std::log2 (this->vector_set.size ())));
-        this->tree = new kdtree_node[tsize];
+        if (this->tree == nullptr)
+          this->tree = new kdtree_node[tsize];
+        if (this->tree != nullptr && oldsize < tsize) {
+          delete[] this->tree;
+          this->tree = new kdtree_node[tsize];
+        }
         recursive_build (0, points.begin (), points.end (),
                          points.size (), 0);
       }
 
-      kdtree () : tree (nullptr) {} ;  // FIXME: shall we delete this? it makes a kdtree
-                                       // without knowing the size of anything!
+      kdtree () : tree (nullptr) {}   // FIXME: shall we delete this? it makes a kdtree
+                                      // without knowing the size of anything!
+      kdtree (size_t dim) : dim (dim), tree (nullptr) {}
+      kdtree (size_t dim, size_t initsize) : dim (dim) {
+        size_t tsize = 4 << (size_t)(std::floor (std::log2 (initsize)));
+        this->tree = new kdtree_node[tsize];
+      }
+      template <std::ranges::input_range R, class Proj = std::identity>
+      kdtree (R&& elements, Proj proj = {}) : dim (proj (*elements.begin ()).size ()),
+                                              tree (nullptr) {
+        relabel_tree(std::move (elements), proj);
+      }
+
       kdtree (const kdtree& other) = delete;
       kdtree (kdtree&& other) : dim (other.dim),
                                 tree (other.tree),
