@@ -212,15 +212,15 @@ namespace posets::utils {
 			return addNode(destinationLayer, newNode);
 		}
 
-		st_node_ptr copyIfNotSimulated(st_node_ptr node, sharingtree* S, st_layer_ptr destinationLayer) {
+		st_node_ptr copyIfNotSimulated(st_node_ptr node, sharingtree* S, st_layer_ptr destinationLayer, st_node_ptr father) {
 			// Check if there is a node that simulates the node we want, if so, just return that node instead
-			st_node_ptr checkNode = destinationLayer->firstNode;
-			while (checkNode != nullptr && checkNode->val > node->val) {
+			st_son_ptr checkNode = father->firstSon;
+			while (checkNode != nullptr && checkNode->node->val > node->val) {
 				if (simulates(checkNode, node)) {
 					return checkNode;
 				}
 				else {
-					checkNode = checkNode->nextNode;
+					checkNode = checkNode->nextSon;
 				}
 			}
 
@@ -234,7 +234,7 @@ namespace posets::utils {
 				}
 				st_son_ptr son = node->firstSon;
 				while (son != nullptr) {
-					addSon(newNode, copyIfNotSimulated(son->node, S, nextLayer));
+					addSon(newNode, copyIfNotSimulated(son->node, S, nextLayer, newNode));
 					son = son->nextSon;
 				}
 			}
@@ -297,11 +297,11 @@ namespace posets::utils {
 				while (n_s != nullptr || n_t != nullptr) {
 					// Case one: One of the lists is done iterating, copy the nodes without match
 					if (n_s == nullptr) {
-						newChild = copyIfNotSimulated(n_t->node, &U, newLayer);
+						newChild = copyIfNotSimulated(n_t->node, &U, newLayer, U.root);
 						n_t = n_t->nextSon;
 					}
 					else if (n_t == nullptr) {
-						newChild = copyIfNotSimulated(n_s->node, &U, newLayer);
+						newChild = copyIfNotSimulated(n_s->node, &U, newLayer, U.root);
 						n_s = n_s->nextSon;
 					}
 					// Case two: The values are identical, we union the two nodes
@@ -312,11 +312,11 @@ namespace posets::utils {
 					}
 					// Case three: One of the lists is "ahead", we know because the nodes in a layer are ordered
 					else if (n_s->node->val > n_t->node->val) {
-						newChild = copyIfNotSimulated(n_s->node, &U, newLayer);
+						newChild = copyIfNotSimulated(n_s->node, &U, newLayer, U.root);
 						n_s = n_s->nextSon;
 					}
 					else {
-						newChild = copyIfNotSimulated(n_t->node, &U, newLayer);
+						newChild = copyIfNotSimulated(n_t->node, &U, newLayer, U.root);
 						n_t = n_t->nextSon;
 					}
 
@@ -348,11 +348,11 @@ namespace posets::utils {
 				while (s_s != nullptr || s_t != nullptr) {
 					// Case one: One of the lists is done iterating, copy the nodes without match
 					if (s_s == nullptr) {
-						newChild = copyIfNotSimulated(s_t->node, U, nextLayer);
+						newChild = copyIfNotSimulated(s_t->node, U, nextLayer, newNode);
 						s_t = s_t->nextSon;
 					}
 					else if (s_t == nullptr) {
-						newChild = copyIfNotSimulated(s_s->node, U, nextLayer);
+						newChild = copyIfNotSimulated(s_s->node, U, nextLayer, newNode);
 						s_s = s_s->nextSon;
 					}
 					// Case two: The values are identical, we union the two nodes
@@ -363,11 +363,11 @@ namespace posets::utils {
 					}
 					// Case three: One of the lists is "ahead", we know because the nodes in a layer are ordered
 					else if (s_s->node->val > s_t->node->val) {
-						newChild = copyIfNotSimulated(s_s->node, U, nextLayer);
+						newChild = copyIfNotSimulated(s_s->node, U, nextLayer, newNode);
 						s_s = s_s->nextSon;
 					}
 					else {
-						newChild = copyIfNotSimulated(s_t->node, U, nextLayer);
+						newChild = copyIfNotSimulated(s_t->node, U, nextLayer, newNode);
 						s_t = s_t->nextSon;
 					}
 
