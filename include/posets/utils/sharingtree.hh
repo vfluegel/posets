@@ -253,27 +253,21 @@ namespace posets::utils {
 			st_son_ptr s1 = n1->firstSon;
 			st_son_ptr s2 = n2->firstSon; //Maybe add a check that they aren't just both empty? Can't be empty bc of ST definition!
 			// Check every son of n1
-			while (s1 != nullptr) {
-				// There was no son of n2 that simulates the son of n1, so we know the node doesn't simulate
-				if (s2 == nullptr) return false;
+			while (s2 != nullptr) {
+				// There was no son of n1 that simulates the son of n2, so we know the node doesn't simulate
+				if (s1 == nullptr) return false;
 
-				if (s1->val >= s2->val) {
-					// Node is a simulation candidate!
-					if (simulates(s1, s2)) {
-						// If it simulates, we move on to the next child
-						s1 = s1->nextSon;
-						// We return to the first child (might not be necessary)
-						s2 = n2->firstSon;
-					}
-					else {
-						// Try the next
-						s2 = s2->nextSon;
-					}
+				if (simulates(s1, s2)) {
+					// If it simulates, we move on to the next child
+					s2 = s2->nextSon;
+					// We return to the first child (might not be necessary)
+					s1 = n1->firstSon;
 				}
 				else {
-					// Try the next 
-					s2 = s2->nextSon;
+					// Try the next
+					s1 = s1->nextSon;
 				}
+				
 			}
 			// There was a simulating node found for every son, so the node simulates
 			return true;
