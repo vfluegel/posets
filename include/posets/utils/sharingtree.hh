@@ -213,7 +213,7 @@ namespace posets::utils {
 			return addNode(destinationLayer, newNode);
 		}
 
-		st_node_ptr copyIfNotSimulated(st_node_ptr node, sharingtree* S, st_layer_ptr destinationLayer, st_node_ptr father) {
+		st_node_ptr copyIfNotSimulated(st_node_ptr node, sharingtree& S, st_layer_ptr destinationLayer, st_node_ptr father) {
 			// Check if there is a node that simulates the node we want, if so, just return that node instead
 			st_son_ptr checkNode = father->firstSon;
 			while (checkNode != nullptr && checkNode->node->val > node->val) {
@@ -231,7 +231,7 @@ namespace posets::utils {
 			if (node->nextNode != nullptr) {
 				st_layer_ptr nextLayer = destinationLayer->nextLayer;
 				if (nextLayer == nullptr) {
-					nextLayer = S->addLastLayer();
+					nextLayer = S.addLastLayer();
 				}
 				st_son_ptr son = node->firstSon;
 				while (son != nullptr) {
@@ -328,8 +328,8 @@ namespace posets::utils {
 			return false;
 		}
 
-		bool st_includes(sharingtree* S, V& x) {
-			st_son_ptr n = S->root->firstSon;
+		bool st_includes(sharingtree& S, V& x) {
+			st_son_ptr n = S.root->firstSon;
 			while (n != nullptr)
 			{
 				// If x is nonempty, but n is already the end-node, we have to check the next branch
@@ -353,52 +353,7 @@ namespace posets::utils {
 		* Union algorithm
 		* 
 		*/
-		sharingtree st_union(sharingtree* S, sharingtree* T) {
-			sharingtree U{};
-			U.root = new st_node;
-
-			st_son_ptr n_s = S->root->firstSon;
-			st_son_ptr n_t = T->root->firstSon;
-
-			if (n_s != nullptr && n_t != nullptr) {
-				st_layer_ptr newLayer = U.addLastLayer();
-				st_node_ptr newChild{ nullptr };
-				while (n_s != nullptr || n_t != nullptr) {
-					// Case one: One of the lists is done iterating, copy the nodes without match
-					if (n_s == nullptr) {
-						newChild = copyIfNotSimulated(n_t->node, &U, newLayer, U.root);
-						n_t = n_t->nextSon;
-					}
-					else if (n_t == nullptr) {
-						newChild = copyIfNotSimulated(n_s->node, &U, newLayer, U.root);
-						n_s = n_s->nextSon;
-					}
-					// Case two: The values are identical, we union the two nodes
-					else if (n_s->node->val == n_t->node->val) {
-						newChild = node_union(n_s->node, n_t->node, &U, newLayer);
-						n_s = n_s->nextSon;
-						n_t = n_t->nextSon;
-					}
-					// Case three: One of the lists is "ahead", we know because the nodes in a layer are ordered
-					else if (n_s->node->val > n_t->node->val) {
-						newChild = copyIfNotSimulated(n_s->node, &U, newLayer, U.root);
-						n_s = n_s->nextSon;
-					}
-					else {
-						newChild = copyIfNotSimulated(n_t->node, &U, newLayer, U.root);
-						n_t = n_t->nextSon;
-					}
-
-					//Add as a  son
-					if (newChild != nullptr) {
-						addSon(U.root, newChild);
-					}
-				}
-			}
-			return U;
-		}
-
-		st_node_ptr node_union(st_node_ptr n_s, st_node_ptr n_t, sharingtree* U, st_layer_ptr newLayer) {
+		st_node_ptr node_union(st_node_ptr n_s, st_node_ptr n_t, sharingtree& U, st_layer_ptr newLayer) {
 			st_node_ptr newNode{};
 			// Start by inserting EoL if the value is EoL
 			if (n_s == nullptr) {
@@ -409,11 +364,12 @@ namespace posets::utils {
 				st_node->val = n_s->val;
 				st_layer_ptr nextLayer = newLayer->nextLayer;
 				if (nextLayer == nullptr) {
-					nextLayer = U->addLastLayer();
+					nextLayer = U.addLastLayer();
 				}
 				st_son_ptr s_s = n_s->firstSon;
 				st_son_ptr s_t = n_t->firstSon;
 
+				st_node_ptr newChild{ nullptr };
 				while (s_s != nullptr || s_t != nullptr) {
 					// Case one: One of the lists is done iterating, copy the nodes without match
 					if (s_s == nullptr) {
@@ -450,6 +406,53 @@ namespace posets::utils {
 			return newNode;
 		}
 
+		sharingtree st_union(sharingtree& S, sharingtree& T) {
+			sharingtree U{};
+			U.root = new st_node;
+			U.root->isRoot = true;
+
+			st_son_ptr n_s = S.root->firstSon;
+			st_son_ptr n_t = T.root->firstSon;
+
+			if (n_s != nullptr && n_t != nullptr) {
+				st_layer_ptr newLayer = U.addLastLayer();
+				st_node_ptr newChild{ nullptr };
+				while (n_s != nullptr || n_t != nullptr) {
+					// Case one: One of the lists is done iterating, copy the nodes without match
+					if (n_s == nullptr) {
+						newChild = copyIfNotSimulated(n_t->node, U, newLayer, U.root);
+						n_t = n_t->nextSon;
+					}
+					else if (n_t == nullptr) {
+						newChild = copyIfNotSimulated(n_s->node, U, newLayer, U.root);
+						n_s = n_s->nextSon;
+					}
+					// Case two: The values are identical, we union the two nodes
+					else if (n_s->node->val == n_t->node->val) {
+						newChild = node_union(n_s->node, n_t->node, U, newLayer);
+						n_s = n_s->nextSon;
+						n_t = n_t->nextSon;
+					}
+					// Case three: One of the lists is "ahead", we know because the nodes in a layer are ordered
+					else if (n_s->node->val > n_t->node->val) {
+						newChild = copyIfNotSimulated(n_s->node, U, newLayer, U.root);
+						n_s = n_s->nextSon;
+					}
+					else {
+						newChild = copyIfNotSimulated(n_t->node, U, newLayer, U.root);
+						n_t = n_t->nextSon;
+					}
+
+					//Add as a  son
+					if (newChild != nullptr) {
+						addSon(U.root, newChild);
+					}
+				}
+			}
+			return U;
+		}
+
+		
 		/*
 		* Intersection algorithm
 		*
