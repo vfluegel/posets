@@ -328,8 +328,8 @@ namespace posets::utils {
 			return false;
 		}
 
-		bool st_includes(sharingtree& S, V& x) {
-			st_son_ptr n = S.root->firstSon;
+		bool st_includes(V& x) {
+			st_son_ptr n = this->root->firstSon;
 			while (n != nullptr)
 			{
 				// If x is nonempty, but n is already the end-node, we have to check the next branch
@@ -406,12 +406,12 @@ namespace posets::utils {
 			return newNode;
 		}
 
-		sharingtree st_union(sharingtree& S, sharingtree& T) {
+		sharingtree st_union(sharingtree& T) {
 			sharingtree U{};
 			U.root = new st_node;
 			U.root->isRoot = true;
 
-			st_son_ptr n_s = S.root->firstSon;
+			st_son_ptr n_s = this->root->firstSon;
 			st_son_ptr n_t = T.root->firstSon;
 
 			if (n_s != nullptr && n_t != nullptr) {
@@ -507,12 +507,12 @@ namespace posets::utils {
 			return newNode;
 		}
 
-		sharingtree st_intersect(sharingtree& S, sharingtree& T) {
+		sharingtree st_intersect(sharingtree& T) {
 			sharingtree I{};
 			I.root = new st_node;
 			I.root->isRoot = true;
 
-			st_son_ptr n_s = S.root->firstSon;
+			st_son_ptr n_s = this->root->firstSon;
 			st_layer_ptr newLayer = I.addLastLayer();
 
 			while (n_s != nullptr) {
