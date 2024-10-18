@@ -273,6 +273,80 @@ namespace posets::utils {
 			return true;
 		}
 
+		void node_reduce(st_node_ptr n, st_node_ptr father) {
+			if (!n->isEnd) {
+				st_son_ptr checkNode = father->firstSon;
+				while (checkNode != nullptr && checkNode->node->val > n->val) {
+					if (simulates(checkNode, node)) {
+						removeSon(father, n);
+						return;
+					}
+					else {
+						checkNode = checkNode->nextSon;
+					}
+				}
+
+				// We did not find a simulating sibling, so we move down one layer
+				st_son_ptr s = n->firstSon;
+				while (s != nullptr) {
+					node_reduce(s->node, n);
+				}
+			}
+		}
+
+		void reduce(sharingtree& S) {
+			st_node_ptr n = S.root->firstSon;
+			while (n != nullptr) {
+				node_reduce(n, S.root)
+			}
+		}
+
+
+		/*
+		* Inclusion
+		*/
+		bool node_includes(st_node_ptr n, V& x) {
+			if (n->val >= x.head) // TODO: add correct way to get head
+			{
+				// The current node is a candidate, we check the children
+				st_son_ptr s = n->firstSon;
+				while (s != nullptr) {
+					if (x.length == 1 && s->node->isEnd) {
+						// We are at the end of the input vector and reached an EoL node
+						return true;
+					}
+					else if (node_includes(s->node, x.tail)) { //TODO: add correct way to get tail
+						return true;
+					}
+					else {
+						s = s->nextSon;
+					}
+				}
+			}
+			// If we get here, the current branch can be discarded
+			return false;
+		}
+
+		bool st_includes(sharingtree* S, V& x) {
+			st_son_ptr n = S->root->firstSon;
+			while (n != nullptr)
+			{
+				// If x is nonempty, but n is already the end-node, we have to check the next branch
+				if (x.lenght >= 1 && n->node->isEnd) // TODO: add correct way to get length of x
+				{
+					n = n->nextSon;
+				}
+				else if (node_includes(n, x)) {
+					return true;
+				}
+				else {
+					n = n->nextSon;
+				}
+			}
+			// If we get here, no match was found
+			return false;
+		}
+
 
 		/*
 		* Union algorithm
