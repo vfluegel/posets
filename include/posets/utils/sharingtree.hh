@@ -1,6 +1,7 @@
 #pragma once
 
 #include <posets/concepts.hh>
+#include <algorithm>
 
 namespace posets::utils {
 
@@ -447,6 +448,97 @@ namespace posets::utils {
 				addNode(newLayer, newNode);
 			}
 			return newNode;
+		}
+
+		/*
+		* Intersection algorithm
+		*
+		*/
+		st_node_ptr node_intersect(st_node_ptr n_s, st_node_ptr n_t, sharingtree& I, st_layer_ptr newLayer, st_node_ptr father) {
+			st_node_ptr newNode = new st_node();
+			// Start by inserting EoL if the value is EoL
+			if (n_s->isEnd || n_t->isEnd) {
+				newNode->isEnd = true;
+				addNode(newLayer, newNode);
+			}
+			else {
+				newNode->val = min(n_s->val, n_t->val);
+				st_layer_ptr nextLayer = newLayer->nextLayer;
+				if (nextLayer == nullptr) {
+					nextLayer = I.addLastLayer();
+				}
+				st_son_ptr s_s = n_s->firstSon;
+
+				while (s_s != nullptr) {
+					st_son_ptr s_t = n_t->firstSon;
+					while (s_t != nullptr)
+					{
+						st_node_ptr newChild = node_intersect(s_s->node, s_t->node, I, nextLayer, newNode);
+						if (newChild != nullptr) {
+							addSon(newNode, newChild);
+						}
+						s_t = s_t->nextSon;
+					}
+					s_s = s_s->nextSon;
+				}
+
+				if (newNode->firstSon != nullptr) {
+					// Add if not simulated
+					st_son_ptr checkNode = father->firstSon;
+					while (checkNode != nullptr && checkNode->node->val > newNode->val) {
+						if (simulates(checkNode, newNode)) {
+							// Discard the node we built and return the simulating one instead
+							delete newNode;
+							return checkNode;
+						}
+						else {
+							checkNode = checkNode->nextSon;
+						}
+					}
+					addNode(newLayer, newNode);
+				}
+				else {
+					newNode = nullptr;
+				}
+			}
+			return newNode;
+		}
+
+		sharingtree st_intersect(sharingtree& S, sharingtree& T) {
+			sharingtree I{};
+			I.root = new st_node;
+			I.root->isRoot = true;
+
+			st_son_ptr n_s = S.root->firstSon;
+			st_layer_ptr newLayer = I.addLastLayer();
+
+			while (n_s != nullptr) {
+				st_son_ptr n_t = T.root->firstSon;
+				while (n_t != nullptr) {
+					st_node_ptr newChild = node_intersect(n_s->node, n_t->node, I, newLayer, I.root);
+					if (newChild != nullptr) {
+						addSon(I.root, newChild);
+					}
+					n_t = n_t->nextSon;
+				}
+				n_s = n_s->nextSon;
+			}
+			
+			bool stop = false;
+			while (!stop) {
+				if (I.lastLayer == nullptr) {
+					stop = true;
+				}
+				else if (I.lastLayer->firstNode != nullptr) {
+					stop = true;
+				}
+				else {
+					I.deleteLastLayer();
+				}
+			}
+			
+			reduce(I);
+			return I;
 		}
 
 
