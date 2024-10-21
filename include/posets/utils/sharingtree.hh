@@ -248,7 +248,7 @@ namespace posets::utils {
 		*/
 
 		bool simulates(st_node_ptr n1, st_node_ptr n2) {
-			if (n1->firstSon == nullptr) return true; // Not sure about this one, have to figure out EoL representation, but might work becasue only End and Root may have no successors
+			if (n1->isEnd) return n2->isEnd;
 			// Preliminary check: Condition 1, value must be greater or equal
 			if (n1->val < n2->val) return false;
 			st_son_ptr s1 = n1->firstSon;
