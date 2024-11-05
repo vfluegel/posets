@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <vector>
 #include <map>
 #include <ranges>
@@ -119,6 +120,7 @@ namespace posets::utils {
 		}
 
 		st_node_ptr hasSon(st_node_ptr node, size_t val) {
+      assert (node != nullptr);
 			st_son_ptr currentSon = node->firstSon;
 			while (currentSon != nullptr && currentSon->node->val > val) {
 				currentSon = currentSon->nextSon;
