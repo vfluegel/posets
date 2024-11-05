@@ -312,7 +312,7 @@ namespace posets::utils {
 			if (!n->isEnd) {
 				st_son_ptr checkNode = father->firstSon;
 				while (checkNode != nullptr && checkNode->node->val > n->val) {
-					if (simulates(checkNode, n)) {
+					if (simulates(checkNode->node, n)) {
 						removeSon(father, n);
 						return;
 					}
@@ -330,15 +330,15 @@ namespace posets::utils {
 		}
 
 		void reduce(sharingtree& S) {
-			st_node_ptr n = S.root->firstSon;
+			st_node_ptr n = S.root->firstSon->node;
 			while (n != nullptr) {
 				node_reduce(n, S.root);
 			}
 		}
 
 
-		bool node_includes(st_node_ptr n, V& x) {
-			if (n->val >= x.begin())
+		bool node_includes(st_node_ptr n, const V& x) {
+			if (n->val >= *x.begin())
 			{
 				// The current node is a candidate, we check the children
 				st_son_ptr s = n->firstSon;
@@ -347,7 +347,7 @@ namespace posets::utils {
 						// We are at the end of the input vector and reached an EoL node
 						return true;
 					}
-					else if (node_includes(s->node, x.end())) {
+					else if (node_includes(s->node, *x.end())) {
 						return true;
 					}
 					else {
@@ -365,11 +365,11 @@ namespace posets::utils {
 			st_node_ptr newNode;
 			// Start by inserting EoL if the value is EoL
 			if (n_s->isEnd || n_t->isEnd) {
-				newNode = I.createNode(NULL, true);
+				newNode = I.createNode(0, true);
 				I.addNode(newLayer, newNode);
 			}
 			else {
-				newNode = I.createNode(min(n_s->val, n_t->val));
+				newNode = I.createNode(std::min(n_s->val, n_t->val));
 				st_layer_ptr nextLayer = newLayer->nextLayer;
 				if (nextLayer == nullptr) {
 					nextLayer = I.addLastLayer();
@@ -393,10 +393,9 @@ namespace posets::utils {
 					// Add if not simulated
 					st_son_ptr checkNode = father->firstSon;
 					while (checkNode != nullptr && checkNode->node->val > newNode->val) {
-						if (simulates(checkNode, newNode)) {
+						if (simulates(checkNode->node, newNode)) {
 							// Discard the node we built and return the simulating one instead
-							delete newNode;
-							return checkNode;
+							return checkNode->node;
 						}
 						else {
 							checkNode = checkNode->nextSon;
@@ -526,7 +525,7 @@ namespace posets::utils {
 	
 	public:
 		// Constructor for initialising all "combination trees"
-		sharingtree(sharingtree& S, sharingtree& T) :
+		sharingtree(sharingtree<V>& S, sharingtree<V>& T) :
 			maxLayers{std::max(S.maxLayers, T.maxLayers)},
 			maxNodes{S.maxNodes + T.maxNodes},
 			maxSons{S.maxSons + T.maxSons}
@@ -536,8 +535,8 @@ namespace posets::utils {
 			sonBuffer = new st_son[maxSons];
 
 			// Create root with arbitrary value, will not be read
-			createNode(NULL, false, true);
-			st_layer_ptr layer1 = addFirstLayer();
+			createNode(0, false, true);
+			addFirstLayer();
 		}
 
 		template <std::ranges::input_range R>
@@ -597,7 +596,7 @@ namespace posets::utils {
 				{
 					n = n->nextSon;
 				}
-				else if (node_includes(n, x)) {
+				else if (node_includes(n->node, x)) {
 					return true;
 				}
 				else {
@@ -616,7 +615,7 @@ namespace posets::utils {
 
 		sharingtree st_union(sharingtree& T) {
 			sharingtree U{ *this, T };
-			U.root = U.createNode(NULL, false, true);
+			U.root = U.createNode(0, false, true);
 
 			st_son_ptr n_s = this->root->firstSon;
 			st_son_ptr n_t = T.root->firstSon;
@@ -666,7 +665,7 @@ namespace posets::utils {
 		*/
 		sharingtree st_intersect(sharingtree& T) {
 			sharingtree I{ *this, T };
-			I.root = I.createNode(NULL, false, true);
+			I.root = I.createNode(0, false, true);
 
 			st_son_ptr n_s = this->root->firstSon;
 			st_layer_ptr newLayer = I.addLastLayer();
