@@ -582,7 +582,6 @@ namespace posets::utils {
 			delete[] this->sonBuffer;
 			delete[] this->nodeBuffer;
 			delete[] this->layerBuffer;
-			delete this->root;
 		}
 
 
