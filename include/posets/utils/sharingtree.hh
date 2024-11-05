@@ -551,7 +551,7 @@ namespace posets::utils {
 			sonBuffer = new st_son[maxSons];
 
 			// Create root with arbitrary value, will not be read
-			createNode(0, false, true);
+			root = createNode(0, false, true);
 			st_layer_ptr layer1 = addFirstLayer();
 
 			elementVec = std::move(elements);
