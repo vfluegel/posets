@@ -1,7 +1,6 @@
 #pragma once
 
 #include <posets/concepts.hh>
-#include <posets/downsets.hh>
 #include <posets/vectors/generic.hh>
 #include <posets/vectors/X_and_bitset.hh>
 

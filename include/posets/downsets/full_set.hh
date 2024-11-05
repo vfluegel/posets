@@ -16,7 +16,7 @@ namespace posets::downsets {
     public:
       typedef V value_type;
 
-      full_set () {}
+      full_set () = delete;
 
       full_set (const full_set&) = delete;
       full_set (full_set&&) = default;
@@ -24,6 +24,12 @@ namespace posets::downsets {
 
       full_set (V&& v) {
         insert (std::move (v));
+      }
+
+      full_set (std::vector<V>&& elements) noexcept {
+        assert (elements.size() > 0);
+        for (auto&& e : elements)
+          insert (std::move (e));
       }
 
       bool contains (const V& v) const {
