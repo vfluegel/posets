@@ -89,18 +89,18 @@ namespace posets::utils {
 				while (currentSon->nextSon != nullptr && currentSon->node->val > son->val) {
 					currentSon = currentSon->nextSon;
 				}
-				if (currentSon->node->val == son->val) {
-					// Constraint on successors is not satisfied -> Throw error or insert children as children of node?
-				}
-				else {
-					st_son_ptr newSon = &(sonBuffer[sonBufferIndex]);
-					sonBufferIndex++;
-					newSon->node = son;
-					newSon->nextSon = currentSon->nextSon;
-					currentSon->nextSon = newSon;
-				}
-			}
-		}
+                                // Constraint on successors may not satisfied
+                                assert(currentSon->node->val != son->val);
+                                // FIXME: Throw error or insert children as
+                                // children of node?
+
+                                st_son_ptr newSon =
+                                    &(sonBuffer[sonBufferIndex]);
+                                sonBufferIndex++;
+                                newSon->node = son;
+                                newSon->nextSon = currentSon->nextSon;
+                                currentSon->nextSon = newSon;
+                }
 
 		void removeSon(st_node_ptr node, st_node_ptr son) {
 			st_son_ptr currentSon = node->firstSon;
