@@ -63,6 +63,8 @@ private:
     this->k = k;
     this->dim = dim;
     layers = new st_node*[dim];
+    layer_size = new size_t[dim];
+    layer_nxt = new size_t[dim];
     inverse = new std::unordered_map<st_node, size_t, st_hash, st_equal>[dim];
     for (size_t i = 0; i < dim; i++) {
       layer_size[i] = INIT_LAYER_SIZE;
