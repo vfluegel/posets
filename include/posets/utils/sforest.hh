@@ -121,7 +121,7 @@ public:
         assert(child == 0);
         for (size_t i = 0; i < parent.numchild; i++) {
           auto bottom_node = layers[lay + 1][parent.children[i]];
-          temp.push_back(bottom_node.val);
+          temp.push_back(bottom_node.label);
           std::vector<int> cpy{temp};
           res.push_back(V(std::move(cpy)));
           temp.pop_back();
@@ -148,7 +148,7 @@ public:
     // component of the given vector
     for (const auto i : roots) {
       assert(i < layer_nxt[0]);
-      if (covered[0] <= layers[0][i].val)
+      if (covered[0] <= layers[0][i].label)
         to_visit.push({0, i, 0});
     }
 
@@ -163,9 +163,9 @@ public:
         // it is sufficient to check the last child
         size_t i = parent.numchild - 1;
         auto bottom_node = layers[lay + 1][parent.children[i]];
-        if (covered[lay + 1] <= bottom_node.val)
+        if (covered[lay + 1] <= bottom_node.label)
           return true;
-      } else {           // recursive case
+      } else { // recursive case
         // Either we're done with this node and we just mark it as visited or
         // we need to keep it and we add it's next son
         size_t c = child;
@@ -174,14 +174,14 @@ public:
           auto child_node = layers[lay + 1][parent.children[i]];
           // find the first index where the order holds
           // FIXME: this could be a binary search
-          if (covered[lay] > child_node.val)
+          if (covered[lay] > child_node.label)
             continue;
           do {
             child_node = layers[lay + 1][parent.children[c]];
             c++;
-          } while (covered[lay] > child_node.val);
+          } while (covered[lay] > child_node.label);
           c--;
-        } 
+        }
         if (c < parent.numchild) {
           to_visit.push({lay, node, c + 1});
           to_visit.push({lay + 1, parent.children[c], 0});
@@ -195,6 +195,8 @@ public:
   std::vector<size_t> add_vectors(R &&elements) {
     // TODO: Vanessa please help, this should return the indices of the root
     // nodes (in the first layer) of the set of vectors added
+    std::vector<size_t> res;
+    return res;
   }
 };
 

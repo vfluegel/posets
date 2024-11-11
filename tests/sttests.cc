@@ -21,7 +21,8 @@ int main(int argc, char const *argv[])
     utils::sforest<VType> f{10, 3};
     auto idcs = f.add_vectors(std::move(vvtovv(data)));
 
-    assert(f.cover_vector(idcs, std::move(vvtovv(data))));
+    std::vector<char> v = {2, 2, 2};
+    assert(f.cover_vector(idcs, VType (std::move(v))));
 
     return 0;
 }
