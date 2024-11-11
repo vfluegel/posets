@@ -119,7 +119,8 @@ public:
         for (size_t i = 0; i < parent.numchild; i++) {
           auto bottom_node = layers[lay + 1][parent.children[i]];
           temp.push_back(bottom_node.val);
-          res.push_back(V(std::copy(temp)));
+          std::vector<int> cpy {temp};
+          res.push_back(V(std::move(cpy)));
           temp.pop_back();
         }
         temp.pop_back();  // done with this parent
