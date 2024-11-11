@@ -4,6 +4,7 @@
 #include <iostream>
 #include <ranges>
 #include <stack>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -77,6 +78,7 @@ public:
   sforest() : layers{nullptr} {}
 
   sforest(int k, size_t dim) {
+    assert(dim >= 2);
     this->init(k, dim);
   }
 
@@ -93,10 +95,37 @@ public:
   }
 
   std::vector<V> get_all() {
-    // Declare a stack of tuples of stnode, child no., and layer
-    // Traverse all roots at dimension 0
+    // Stack with tuples (layer, node id, child id)
+    std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
+
+    // Add all roots at dimension 0
     for (size_t i = 0; i < layer_nxt[0]; i++) {
-      // TODO
+      to_visit.push({0, layers[0][i], 0});
+    }
+
+    std::vector<V> res;
+    std::vector<int> temp;
+    while (to_visit.size() > 0) {
+      const auto [lay, node, child] = to_visit.top();
+      to_visit.pop();
+      const auto parent = layers[lay][node];
+      // base case: reached the bottom layer
+      if (lay == this->dim - 2) {
+        assert(child == 0);
+        for (size_t i = 0; i < parent.numchild; i++) {
+          auto bottom_node = layers[lay + 1][parent.children[i]];
+          temp.push_back(bottom_node.val);
+          res.push_back(V(std::copy(temp)));
+          temp.pop_back();
+        }
+      } else {  // recursive case
+        // Either we're done with this node and we just mark it as visited or
+        // we need to keep it and we add it's next son
+        if (child < parent.numchild) {
+          to_visit.push({lay, node, child + 1});
+          to_visit.push({lay + 1, parent.children[child], 0});
+        }
+      }
     }
   }
 
