@@ -109,6 +109,10 @@ public:
       const auto [lay, node, child] = to_visit.top();
       to_visit.pop();
       const auto parent = layers[lay][node];
+      // first time we see parent? get its label
+      if (child == 0)
+        temp.push_back(parent.label);
+
       // base case: reached the bottom layer
       if (lay == this->dim - 2) {
         assert(child == 0);
@@ -118,12 +122,15 @@ public:
           res.push_back(V(std::copy(temp)));
           temp.pop_back();
         }
+        temp.pop_back();  // done with this parent
       } else {  // recursive case
         // Either we're done with this node and we just mark it as visited or
         // we need to keep it and we add it's next son
         if (child < parent.numchild) {
           to_visit.push({lay, node, child + 1});
           to_visit.push({lay + 1, parent.children[child], 0});
+        } else {
+          temp.pop_back();  // done with this parent
         }
       }
     }
