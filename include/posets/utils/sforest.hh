@@ -6,7 +6,9 @@
 #include <stack>
 #include <tuple>
 #include <unordered_map>
+#include <map>
 #include <vector>
+#include <optional>
 
 #include <posets/concepts.hh>
 
@@ -28,6 +30,7 @@ private:
 
   struct st_node {
     int label;
+    bool isEnd;
     size_t *children;
     size_t numchild;
   };
@@ -74,6 +77,202 @@ private:
     cbuffer_size = INIT_LAYER_SIZE * (k + 1);
     child_buffer = new size_t[cbuffer_size];
     cbuffer_nxt = 0;
+  }
+
+  
+
+  std::optional<size_t> hasSon(st_node& node, st_node* layer, int val) {
+    size_t left = 0;
+    size_t right = node.numchild - 1;
+
+    while (left <= right) {
+        size_t mid = left + (right - left) / 2;
+        int midVal = layer[node.children[mid]].label;
+
+        if (midVal == val) {
+            return node.children[mid];
+        } else if (midVal < val) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+
+    return std::nullopt;
+  }
+
+  void addSon(st_node& node, st_node* layer, size_t son) {
+    // Find the insertion point using binary search
+    int left = 0;
+    int right = node.numchild - 1;
+    st_node sonNode = layer[son];
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        int midVal = layer[node.children[mid]].label;
+        
+        if (sonNode.label == midVal) {
+            // This is not supposed to happen -> may add the union approach here directly
+            return;
+        }
+        else if (sonNode.label < midVal) {
+            right = mid - 1;
+        }
+        else {
+            left = mid + 1;
+        }
+    }
+    // Shift elements in the child buffer to make room for the new child
+    int i = cbuffer_nxt;
+    size_t* nextSpace = &child_buffer[cbuffer_nxt];
+    while (nextSpace != &node.children[left]) {
+        child_buffer[i] = child_buffer[i - 1];
+        i--;
+    }
+
+    // Insert the new value
+    node.children[left] = son;
+    cbuffer_nxt++;
+  }
+
+  size_t addNode(st_node& node, size_t destinationLayer) {
+    auto existingNode = inverse->find(node);
+    if(existingNode == inverse->end()) {
+      size_t newID = layer_nxt[destinationLayer];
+      (*inverse)[node] = newID;
+      layer_nxt[destinationLayer]++;
+      return newID;
+    }
+    else {
+      return existingNode->second;
+    }
+  }
+
+  void removeSon(st_node& node, st_node* layer, size_t son) {
+      // Maybe not even necessary? Otherwise need a replaceSon function
+  }
+
+  size_t copy(st_node& node, size_t destinationLayer) {
+    st_node newNode = layers[destinationLayer][layer_nxt[destinationLayer]];
+    newNode.label = node.label;
+    newNode.isEnd = node.isEnd;
+    for(size_t i; i < node.numchild; i++) {
+      st_node childNode = layers[destinationLayer + 1][node.children[i]];
+      size_t newSon = copy(childNode, destinationLayer + 1);
+      addSon(newNode, layers[destinationLayer + 1], newSon);
+    }
+    return addNode(newNode, destinationLayer);
+  }
+
+  size_t node_union(size_t n_s, size_t n_t, size_t destinationLayer) {
+    st_node node_s = layers[destinationLayer][n_s];
+    st_node node_t = layers[destinationLayer][n_t];
+    st_node newNode = layers[destinationLayer + 1][layer_nxt[destinationLayer + 1]];
+    if(node_s.isEnd) {
+      newNode.isEnd = true;
+    }
+    else {
+      size_t s_s{ 0 };
+      size_t s_t{ 0 };
+      size_t newChild;
+      while(s_s < node_s.numchild || s_t < node_t.numchild) {
+        // Case one: One of the lists is done iterating, copy the nodes
+        // without match
+        st_node son_s = layers[destinationLayer + 1][node_s.children[s_s]];
+        st_node son_t = layers[destinationLayer + 1][node_s.children[s_t]];
+        if(s_s == node_s.numchild) {
+          newChild = copy(son_t, destinationLayer + 1);
+          s_t++;
+        }
+        else if(s_t == node_t.numchild) {
+          newChild = copy(son_s, destinationLayer + 1);
+          s_s++;
+        }
+        // Case two: The values are identical, we union the two nodes
+        else if (son_s.label == son_t.label) {
+          newChild = node_union(node_s.children[s_s], node_t.children[s_t], 
+                                destinationLayer + 1);
+          s_s++;
+          s_t++;
+        }
+        // Case three: One of the lists is "ahead", we know because the nodes
+        // in a layer are ordered
+        else if (node_s.label > node_t.label) {
+          newChild = copy(son_s, destinationLayer + 1);
+          s_s++;
+        } else {
+          newChild = copy(son_t, destinationLayer + 1);
+          s_t++;
+        }
+
+        addSon(newNode, layers[destinationLayer + 1], newChild);
+      }
+    }
+    return addNode(newNode, destinationLayer);
+
+  }
+
+  std::map<std::vector<size_t>, std::vector<size_t>>
+  buildLayer(std::map<std::vector<size_t>, std::vector<size_t>> &layerData,
+             int currentLayer, const auto& elementVec) {
+    // Init result
+    std::map<std::vector<size_t>, std::vector<size_t>> resultNodes{};
+
+    // We have built all layers, so we create the final layer with the EoL
+    // node
+    if (currentLayer == this->k + 1) {
+      st_node endNode = layers[this->k][layer_nxt[this->k]];
+      endNode.isEnd = true;
+      endNode.label = -1;
+
+      for (auto const &[n, children] : layerData) {
+        resultNodes[n].push_back(layer_nxt[this->k]);
+      }
+      layer_nxt[this->k]++;
+
+    } else {
+      // Re-Partition the nodes based on a prefix with one more entry
+      std::map<std::vector<size_t>, std::vector<size_t>> newPartition{};
+      for (auto const &[n, children] : layerData) {
+        for (auto const &child : children) {
+          std::vector<size_t> newPrefix{n};
+          newPrefix.push_back(elementVec[child][currentLayer]);
+          newPartition[newPrefix].push_back(child);
+        }
+      }
+
+      // Create the next Layer and fill it with the child nodes
+      auto childNodes = buildLayer(newPartition, k++, elementVec);
+
+      // Create a node for each partition and add the children from that
+      // partition
+      for (auto const &[n, children] : childNodes) {
+        st_node newNode = layers[currentLayer][layer_nxt[currentLayer]];
+        newNode.label = n.back();
+
+        for (auto const &child : children) {
+          // A ST node cannot have two sons with the same value, so we check
+          int sonValue = layers[currentLayer +1][child].label;
+          std::optional<size_t> sameValueSon = hasSon(newNode, layers[currentLayer +1], sonValue);
+          if (!sameValueSon.has_value()) {
+            // Just add the node as son if all is well
+            addSon(newNode, layers[currentLayer +1], child);
+          } else {
+            // If there already is a son with that value, remove it and
+            // compute a union-node of the two instead
+            size_t unionSon =
+                node_union(sameValueSon.value(), child, currentLayer + 1);
+            addSon(newNode, layers[currentLayer +1], unionSon);
+            // TODO: addSon is probably wrong here, need to replace the original
+          }
+        }
+        // Add the created node to the layer and insert it into the result set
+        std::vector<size_t> newPrefix{n};
+        newPrefix.pop_back();
+        resultNodes[newPrefix].push_back(addNode(newNode, currentLayer));        
+      }
+    }
+
+    return resultNodes;
   }
 
 public:
@@ -141,7 +340,32 @@ public:
 
   template <std::ranges::input_range R>
   void add_vectors(R&& elements) {
-    // TODO: Vanessa please help
+    st_node* rootLayer = layers[0];
+    st_node root = rootLayer[layer_nxt[0]];
+
+    auto elementVec = std::move(elements);
+    std::vector<size_t> vectorIds(elementVec.size());
+    std::iota(vectorIds.begin(), vectorIds.end(), 0);
+    std::vector<size_t> pref{};
+    std::map<std::vector<size_t>, std::vector<size_t>> vectorData{
+        {pref, vectorIds}};
+    auto children = buildLayer(vectorData, 1, elementVec);
+    for (auto const &child : children[pref]) {
+      int sonValue = layers[1][child].label;
+      std::optional<size_t> sameValueSon = hasSon(root, layers[1], sonValue);
+      if (!sameValueSon.has_value()) {
+        // Just add the node as son if all is well
+        addSon(root, layers[1], child);
+      } else {
+        // If there already is a son with that value, remove it and
+        // compute a union-node of the two instead
+        size_t unionSon =
+            node_union(sameValueSon.value(), child, 1);
+        addSon(root, layers[1], unionSon);
+        // TODO: again probably need to replace instead of add
+      }
+    }
+    layer_nxt[0]++;
   }
 };
 
