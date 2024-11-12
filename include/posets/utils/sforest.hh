@@ -4,6 +4,7 @@
 #include <iostream>
 #include <ranges>
 #include <stack>
+#include <numeric>
 #include <tuple>
 #include <unordered_map>
 #include <map>
