@@ -19,7 +19,10 @@ int main(int argc, char const *argv[])
     std::vector<std::vector<char>> data{{6, 3, 2}, {5, 5, 4}, {2, 6, 2}};
 
     utils::sforest<VType> f{10, 3};
-    f.add_vectors(std::move(vvtovv(data)));
+    auto idcs = f.add_vectors(std::move(vvtovv(data)));
+
+    std::vector<char> v = {2, 2, 2};
+    assert(f.cover_vector(idcs, VType (std::move(v))));
 
     return 0;
 }
