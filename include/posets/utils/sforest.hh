@@ -304,16 +304,16 @@ public:
     delete[] child_buffer;
   }
 
-  std::vector<V> get_all() {
+  std::vector<V> get_all() const {
     // Stack with tuples (layer, node id, child id)
     std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
 
     // Add all roots at dimension 0
-    for (size_t i = 0; i < layer_nxt[0]; i++)
-      to_visit.push({0, i, 0});
+    for (size_t i = 0; i < layer_nxt[1]; i++)
+      to_visit.push({1, i, 0});
 
     std::vector<V> res;
-    std::vector<int> temp;
+    std::vector<char> temp;
     while (to_visit.size() > 0) {
       const auto [lay, node, child] = to_visit.top();
       to_visit.pop();
@@ -323,12 +323,12 @@ public:
         temp.push_back(parent.label);
 
       // base case: reached the bottom layer
-      if (lay == this->dim - 2) {
+      if (lay == this->dim - 1) {
         assert(child == 0);
         for (size_t i = 0; i < parent.numchild; i++) {
           auto bottom_node = layers[lay + 1][parent.children[i]];
           temp.push_back(bottom_node.label);
-          std::vector<int> cpy{temp};
+          std::vector<char> cpy{temp};
           res.push_back(V(std::move(cpy)));
           temp.pop_back();
         }
@@ -344,18 +344,20 @@ public:
         }
       }
     }
+    return res;
   }
 
-  bool cover_vector(std::vector<size_t> roots, V covered) {
+  bool cover_vector(size_t root, V covered) {
     // Stack with tuples (layer, node id, child id)
     std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
 
     // Add all roots at dimension 0 such that their labels cover the first
     // component of the given vector
-    for (const auto i : roots) {
-      assert(i < layer_nxt[0]);
-      if (covered[0] <= layers[0][i].label)
-        to_visit.push({0, i, 0});
+    st_node& rootNode = layers[0][root];
+    for (size_t i = 0; i < rootNode.numchild; i++) {
+      assert(rootNode.children[i] < layer_nxt[1]);
+      if (covered[0] <= layers[1][rootNode.children[i]].label)
+        to_visit.push({1, rootNode.children[i], 0});
     }
 
     while (to_visit.size() > 0) {
@@ -364,12 +366,12 @@ public:
       const auto parent = layers[lay][node];
 
       // base case: reached the bottom layer
-      if (lay == this->dim - 2) {
+      if (lay == this->dim - 1) {
         assert(child == 0);
         // it is sufficient to check the last child
         size_t i = parent.numchild - 1;
         auto bottom_node = layers[lay + 1][parent.children[i]];
-        if (covered[lay + 1] <= bottom_node.label)
+        if (covered[lay] <= bottom_node.label)
           return true;
       } else { // recursive case
         // Either we're done with this node and we just mark it as visited or
@@ -380,12 +382,12 @@ public:
           auto child_node = layers[lay + 1][parent.children[i]];
           // find the first index where the order holds
           // FIXME: this could be a binary search
-          if (covered[lay] > child_node.label)
+          if (covered[lay+1] > child_node.label)
             continue;
           do {
             child_node = layers[lay + 1][parent.children[c]];
             c++;
-          } while (covered[lay] > child_node.label);
+          } while (covered[lay + 1] > child_node.label);
           c--;
         }
         if (c < parent.numchild) {
@@ -398,7 +400,7 @@ public:
   }
 
   template <std::ranges::input_range R>
-  std::vector<size_t> add_vectors(R&& elements) {
+  size_t add_vectors(R&& elements) {
     st_node* rootLayer = layers[0];
     st_node& root = rootLayer[layer_nxt[0]];
     root.children = &child_buffer[cbuffer_nxt];
@@ -428,8 +430,7 @@ public:
     }
     
     size_t root_id = addNode(root, 0);
-    std::vector<size_t> res = {root_id};
-    return res;
+    return root_id;
   }
 };
 

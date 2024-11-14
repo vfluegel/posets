@@ -23,10 +23,11 @@ int main(int argc, char const *argv[])
 
     // Test adding a second tree to the forest
     std::vector<std::vector<char>> data2{{7, 5, 3}, {4, 8, 4}, {2, 5, 6}};
-    auto idcs2 = f.add_vectors(std::move(vvtovv(data2)));
+    f.add_vectors(std::move(vvtovv(data2)));
 
+    std::cout << f << std::endl;
     std::vector<char> v = {2, 2, 2};
     assert(f.cover_vector(idcs, VType (std::move(v))));
-
+    
     return 0;
 }
