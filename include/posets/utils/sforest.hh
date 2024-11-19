@@ -64,9 +64,12 @@ private:
     }
   };
 
+  // FIXME: From here
   st_node **layers;
   size_t *layer_size;
   size_t *layer_nxt;
+  // until here, replace by std::array<std::vector<st_node>> and forget about
+  // memory management for this! :D
   size_t *child_buffer;
   size_t cbuffer_size;
   size_t cbuffer_nxt;
