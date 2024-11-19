@@ -117,6 +117,7 @@ private:
         
         if (sonNode.label == midVal) {
             // This is not supposed to happen -> may add the union approach here directly
+            assert (false);
             return;
         }
         else if (sonNode.label < midVal) {
