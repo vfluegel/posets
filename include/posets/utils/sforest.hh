@@ -158,7 +158,7 @@ private:
     newNode.isEnd = node.isEnd;
     newNode.children = &child_buffer[cbuffer_nxt];
     cbuffer_nxt += k;
-    for(size_t i; i < node.numchild; i++) {
+    for(size_t i = 0; i < node.numchild; i++) {
       st_node& childNode = layers[destinationLayer + 1][node.children[i]];
       size_t newSon = copy(childNode, destinationLayer + 1);
       addSon(newNode, destinationLayer + 1, newSon);
@@ -313,7 +313,7 @@ public:
       to_visit.push({1, i, 0});
 
     std::vector<V> res;
-    std::vector<char> temp;
+    std::vector<typename V::value_type> temp;
     while (to_visit.size() > 0) {
       const auto [lay, node, child] = to_visit.top();
       to_visit.pop();
@@ -328,7 +328,7 @@ public:
         for (size_t i = 0; i < parent.numchild; i++) {
           auto bottom_node = layers[lay + 1][parent.children[i]];
           temp.push_back(bottom_node.label);
-          std::vector<char> cpy{temp};
+          std::vector<typename V::value_type> cpy{temp};
           res.push_back(V(std::move(cpy)));
           temp.pop_back();
         }
