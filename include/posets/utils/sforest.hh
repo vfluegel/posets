@@ -31,15 +31,20 @@ private:
   struct st_node {
     int label;
     bool isEnd;
-    size_t *children;
+    size_t cbuffer_offset;
     size_t numchild;
+
+    size_t* children() {
+      return child_buffer[cbuffer_offset];
+    }
   };
 
   struct st_hash {
     size_t operator()(const st_node &k) const {
       size_t res = std::hash<int>()(k.label);
+      size_t* children = k.children();
       for (size_t i = 0; i < k.numchild; i++)
-        res ^= std::hash<size_t>()(k.children[i]) << (i + 1);
+        res ^= std::hash<size_t>()(children[i]) << (i + 1);
       return res;
     }
   };
@@ -48,8 +53,10 @@ private:
     bool operator()(const st_node &lhs, const st_node &rhs) const {
       if (lhs.label != rhs.label or lhs.numchild != rhs.numchild)
         return false;
+      size_t* lhs_children = lhs.children();
+      size_t* rhs_children = rhs.children();
       for (size_t i = 0; i < lhs.numchild; i++)
-        if (lhs.children[i] != rhs.children[i])
+        if (lhs_children[i] != rhs_children[i])
           return false;
       return true;
     }
@@ -88,13 +95,14 @@ private:
     
     size_t left = 0;
     size_t right = node.numchild - 1;
+    size_t* children = node.children();
 
     while (left <= right) {
         size_t mid = left + (right - left) / 2;
-        int midVal = layers[childLayer][node.children[mid]].label;
+        int midVal = layers[childLayer][children[mid]].label;
 
         if (midVal == val) {
-            return node.children[mid];
+            return children[mid];
         } else if (midVal < val) {
             left = mid + 1;
         } else {
@@ -110,9 +118,10 @@ private:
     int left = 0;
     int right = node.numchild - 1;
     st_node& sonNode = layers[sonLayer][son];
+    size_t* children = node.children();
     while (left <= right) {
         int mid = left + (right - left) / 2;
-        int midVal = layers[sonLayer][node.children[mid]].label;
+        int midVal = layers[sonLayer][children[mid]].label;
         
         if (sonNode.label == midVal) {
             // This is not supposed to happen -> may add the union approach here directly
@@ -127,11 +136,11 @@ private:
     }
     // Shift elements in the child buffer to make room for the new child
     for (int i = node.numchild; i > left; i--) {
-        node.children[i] = node.children[i - 1];
+        children[i] = children[i - 1];
     }
 
     // Insert the new value
-    node.children[left] = son;
+    children[left] = son;
     node.numchild++;
   }
 
@@ -148,6 +157,22 @@ private:
     }
   }
 
+  size_t addChildren() {
+    // Double the child buffer if it is full
+    if (cbuffer_nxt + k >= cbuffer_size) {
+      size_t* newBuffer = new size_t[cbuffer_size * 2];
+      for(size_t i = 0; i < cbuffer_size; i++) {
+        newBuffer[i] = child_buffer[i];
+      }
+      cbuffer_size *= 2;
+      delete[] child_buffer;
+      child_buffer = newBuffer;
+    }
+    size_t res = cbuffer_nxt;
+    cbuffer_nxt += k;
+    return res;
+  }
+
   void removeSon(st_node& node, st_node* layer, size_t son) {
       // Maybe not even necessary? Otherwise need a replaceSon function
   }
@@ -156,10 +181,11 @@ private:
     st_node& newNode = layers[destinationLayer][layer_nxt[destinationLayer]];
     newNode.label = node.label;
     newNode.isEnd = node.isEnd;
-    newNode.children = &child_buffer[cbuffer_nxt];
-    cbuffer_nxt += k;
+    newNode.cbuffer_offset = addChildren();
+    
+    size_t* children = node.children();
     for(size_t i = 0; i < node.numchild; i++) {
-      st_node& childNode = layers[destinationLayer + 1][node.children[i]];
+      st_node& childNode = layers[destinationLayer + 1][children[i]];
       size_t newSon = copy(childNode, destinationLayer + 1);
       addSon(newNode, destinationLayer + 1, newSon);
     }
@@ -175,16 +201,18 @@ private:
     }
     else {
       newNode.label = node_s.label;
-      newNode.children = &child_buffer[cbuffer_nxt];
-      cbuffer_nxt += k;
+      newNode.cbuffer_offset = addChildren();
       size_t s_s{ 0 };
       size_t s_t{ 0 };
       size_t newChild;
+
+      size_t* node_s_children = node_s.children();
+      size_t* node_t_children = node_t.children();
       while(s_s < node_s.numchild || s_t < node_t.numchild) {
         // Case one: One of the lists is done iterating, copy the nodes
         // without match
-        st_node& son_s = layers[destinationLayer + 1][node_s.children[s_s]];
-        st_node& son_t = layers[destinationLayer + 1][node_s.children[s_t]];
+        st_node& son_s = layers[destinationLayer + 1][node_s_children[s_s]];
+        st_node& son_t = layers[destinationLayer + 1][node_s_children[s_t]];
         if(s_s == node_s.numchild) {
           newChild = copy(son_t, destinationLayer + 1);
           s_t++;
@@ -195,7 +223,7 @@ private:
         }
         // Case two: The values are identical, we union the two nodes
         else if (son_s.label == son_t.label) {
-          newChild = node_union(node_s.children[s_s], node_t.children[s_t], 
+          newChild = node_union(node_s_children[s_s], node_t_children[s_t], 
                                 destinationLayer + 1);
           s_s++;
           s_t++;
@@ -254,8 +282,7 @@ private:
       for (auto const &[n, children] : childNodes) {
         st_node& newNode = layers[currentLayer][layer_nxt[currentLayer]];
         newNode.label = n.back();
-        newNode.children = &child_buffer[cbuffer_nxt];
-        cbuffer_nxt += k;
+        newNode.cbuffer_offset = addChildren();
 
         for (auto const &child : children) {
           // A ST node cannot have two sons with the same value, so we check
@@ -323,10 +350,11 @@ public:
         temp.push_back(parent.label);
 
       // base case: reached the bottom layer
+      size_t* children = parent.children();
       if (lay == this->dim - 1) {
         assert(child == 0);
         for (size_t i = 0; i < parent.numchild; i++) {
-          auto bottom_node = layers[lay + 1][parent.children[i]];
+          auto bottom_node = layers[lay + 1][children[i]];
           temp.push_back(bottom_node.label);
           std::vector<typename V::value_type> cpy{temp};
           res.push_back(V(std::move(cpy)));
@@ -338,7 +366,7 @@ public:
         // we need to keep it and we add it's next son
         if (child < parent.numchild) {
           to_visit.push({lay, node, child + 1});
-          to_visit.push({lay + 1, parent.children[child], 0});
+          to_visit.push({lay + 1, children[child], 0});
         } else {
           temp.pop_back(); // done with this parent
         }
@@ -354,23 +382,25 @@ public:
     // Add all roots at dimension 0 such that their labels cover the first
     // component of the given vector
     st_node& rootNode = layers[0][root];
+    size_t* root_children = root.children();
     for (size_t i = 0; i < rootNode.numchild; i++) {
-      assert(rootNode.children[i] < layer_nxt[1]);
-      if (covered[0] <= layers[1][rootNode.children[i]].label)
-        to_visit.push({1, rootNode.children[i], 0});
+      assert(root_children[i] < layer_nxt[1]);
+      if (covered[0] <= layers[1][root_children[i]].label)
+        to_visit.push({1, root_children[i], 0});
     }
 
     while (to_visit.size() > 0) {
       const auto [lay, node, child] = to_visit.top();
       to_visit.pop();
       const auto parent = layers[lay][node];
+      size_t* children = parent.children();
 
       // base case: reached the bottom layer
       if (lay == this->dim - 1) {
         assert(child == 0);
         // it is sufficient to check the last child
         size_t i = parent.numchild - 1;
-        auto bottom_node = layers[lay + 1][parent.children[i]];
+        auto bottom_node = layers[lay + 1][children[i]];
         if (covered[lay] <= bottom_node.label)
           return true;
       } else { // recursive case
@@ -379,20 +409,20 @@ public:
         size_t c = child;
         if (c == 0) {
           size_t i = parent.numchild - 1;
-          auto child_node = layers[lay + 1][parent.children[i]];
+          auto child_node = layers[lay + 1][children[i]];
           // find the first index where the order holds
           // FIXME: this could be a binary search
           if (covered[lay+1] > child_node.label)
             continue;
           do {
-            child_node = layers[lay + 1][parent.children[c]];
+            child_node = layers[lay + 1][children[c]];
             c++;
           } while (covered[lay + 1] > child_node.label);
           c--;
         }
         if (c < parent.numchild) {
           to_visit.push({lay, node, c + 1});
-          to_visit.push({lay + 1, parent.children[c], 0});
+          to_visit.push({lay + 1, children[c], 0});
         }
       }
     }
@@ -403,8 +433,7 @@ public:
   size_t add_vectors(R&& elements) {
     st_node* rootLayer = layers[0];
     st_node& root = rootLayer[layer_nxt[0]];
-    root.children = &child_buffer[cbuffer_nxt];
-    cbuffer_nxt += k;
+    root.cbuffer_offset = addChildren();
 
     auto elementVec = std::move(elements);
     std::vector<size_t> vectorIds(elementVec.size());
