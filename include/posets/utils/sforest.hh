@@ -33,16 +33,12 @@ private:
     bool isEnd;
     size_t cbuffer_offset;
     size_t numchild;
-
-    size_t* children() {
-      return child_buffer[cbuffer_offset];
-    }
   };
 
   struct st_hash {
     size_t operator()(const st_node &k) const {
       size_t res = std::hash<int>()(k.label);
-      size_t* children = k.children();
+      size_t* children = child_buffer + k.cbuffer_offset;
       for (size_t i = 0; i < k.numchild; i++)
         res ^= std::hash<size_t>()(children[i]) << (i + 1);
       return res;
@@ -53,8 +49,8 @@ private:
     bool operator()(const st_node &lhs, const st_node &rhs) const {
       if (lhs.label != rhs.label or lhs.numchild != rhs.numchild)
         return false;
-      size_t* lhs_children = lhs.children();
-      size_t* rhs_children = rhs.children();
+      size_t* lhs_children = child_buffer + lhs.cbuffer_offset;
+      size_t* rhs_children = child_buffer + rhs.cbuffer_offset;
       for (size_t i = 0; i < lhs.numchild; i++)
         if (lhs_children[i] != rhs_children[i])
           return false;
@@ -95,10 +91,11 @@ private:
     
     size_t left = 0;
     size_t right = node.numchild - 1;
-    size_t* children = node.children();
+    size_t* children = child_buffer + node.cbuffer_offset;
 
     while (left <= right) {
         size_t mid = left + (right - left) / 2;
+        assert (mid < node.numchild);
         int midVal = layers[childLayer][children[mid]].label;
 
         if (midVal == val) {
@@ -118,7 +115,7 @@ private:
     int left = 0;
     int right = node.numchild - 1;
     st_node& sonNode = layers[sonLayer][son];
-    size_t* children = node.children();
+    size_t* children = child_buffer + node.cbuffer_offset;
     while (left <= right) {
         int mid = left + (right - left) / 2;
         int midVal = layers[sonLayer][children[mid]].label;
@@ -181,9 +178,10 @@ private:
     st_node& newNode = layers[destinationLayer][layer_nxt[destinationLayer]];
     newNode.label = node.label;
     newNode.isEnd = node.isEnd;
+    newNode.numchild = node.numchild;
     newNode.cbuffer_offset = addChildren();
     
-    size_t* children = node.children();
+    size_t* children = child_buffer + node.cbuffer_offset;
     for(size_t i = 0; i < node.numchild; i++) {
       st_node& childNode = layers[destinationLayer + 1][children[i]];
       size_t newSon = copy(childNode, destinationLayer + 1);
@@ -201,13 +199,14 @@ private:
     }
     else {
       newNode.label = node_s.label;
+      newNode.numchild = node_s.numchild;
       newNode.cbuffer_offset = addChildren();
       size_t s_s{ 0 };
       size_t s_t{ 0 };
       size_t newChild;
 
-      size_t* node_s_children = node_s.children();
-      size_t* node_t_children = node_t.children();
+      size_t* node_s_children = child_buffer + node_s.cbuffer_offset;
+      size_t* node_t_children = child_buffer + node_t.cbuffer_offset;
       while(s_s < node_s.numchild || s_t < node_t.numchild) {
         // Case one: One of the lists is done iterating, copy the nodes
         // without match
@@ -253,10 +252,14 @@ private:
 
     // We have built all layers, so we create the final layer with the EoL
     // node
-    if (currentLayer == static_cast<int>(this->dim + 1)) {
+    if (static_cast<size_t>(currentLayer) == this->dim + 1) {
+      assert (layer_nxt[currentLayer] < layer_size[currentLayer]);
       st_node& endNode = layers[currentLayer][layer_nxt[currentLayer]];
       endNode.isEnd = true;
       endNode.label = -1;
+      endNode.numchild = 0;
+      // FIXME: Don't we need to increase layer_nxt and possible reallocate
+      // memory?
 
       size_t endNodeID = addNode(endNode, currentLayer);
       for (auto const &[n, children] : layerData) {
@@ -280,8 +283,10 @@ private:
       // Create a node for each partition and add the children from that
       // partition
       for (auto const &[n, children] : childNodes) {
+        assert (layer_nxt[currentLayer] < layer_size[currentLayer]);
         st_node& newNode = layers[currentLayer][layer_nxt[currentLayer]];
         newNode.label = n.back();
+        newNode.numchild = 0;
         newNode.cbuffer_offset = addChildren();
 
         for (auto const &child : children) {
@@ -350,7 +355,7 @@ public:
         temp.push_back(parent.label);
 
       // base case: reached the bottom layer
-      size_t* children = parent.children();
+      size_t* children = child_buffer + parent.cbuffer_offset;
       if (lay == this->dim - 1) {
         assert(child == 0);
         for (size_t i = 0; i < parent.numchild; i++) {
@@ -382,7 +387,7 @@ public:
     // Add all roots at dimension 0 such that their labels cover the first
     // component of the given vector
     st_node& rootNode = layers[0][root];
-    size_t* root_children = root.children();
+    size_t* root_children = child_buffer + rootNode.cbuffer_offset;
     for (size_t i = 0; i < rootNode.numchild; i++) {
       assert(root_children[i] < layer_nxt[1]);
       if (covered[0] <= layers[1][root_children[i]].label)
@@ -393,7 +398,7 @@ public:
       const auto [lay, node, child] = to_visit.top();
       to_visit.pop();
       const auto parent = layers[lay][node];
-      size_t* children = parent.children();
+      size_t* children = child_buffer + parent.cbuffer_offset;
 
       // base case: reached the bottom layer
       if (lay == this->dim - 1) {
@@ -431,16 +436,27 @@ public:
 
   template <std::ranges::input_range R>
   size_t add_vectors(R&& elements) {
+    assert (layers != nullptr);
     st_node* rootLayer = layers[0];
+    assert (rootLayer != nullptr);
     st_node& root = rootLayer[layer_nxt[0]];
+    root.numchild = 0;
     root.cbuffer_offset = addChildren();
 
     auto elementVec = std::move(elements);
+    // We start a Trie encoded as a map from prefixes to sets of indices of
+    // the original vectors, we insert the root too: an empty prefix mapped to
+    // the set of all indices
     std::vector<size_t> vectorIds(elementVec.size());
     std::iota(vectorIds.begin(), vectorIds.end(), 0);
     std::vector<size_t> pref{};
     std::map<std::vector<size_t>, std::vector<size_t>> vectorData{
         {pref, vectorIds}};
+    // Now, we make a recursive call to build the next layer
+    // FIXME: instead of expecting recursive calls to return the children, so
+    // that we add them as such here, we can as the recursive call to create
+    // the node (if needed) and to adds the children too (this avoid
+    // copying/passing around vectors)
     auto children = buildLayer(vectorData, 1, elementVec);
     for (auto const &child : children[pref]) {
       int sonValue = layers[1][child].label;
