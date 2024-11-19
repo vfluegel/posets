@@ -83,7 +83,7 @@ private:
 
   
 
-  std::optional<size_t> hasSon(st_node& node, st_node* layer, int val) {
+  std::optional<size_t> hasSon(st_node& node, size_t childLayer, int val) {
     if(node.numchild == 0) return std::nullopt;
     
     size_t left = 0;
@@ -91,7 +91,7 @@ private:
 
     while (left <= right) {
         size_t mid = left + (right - left) / 2;
-        int midVal = layer[node.children[mid]].label;
+        int midVal = layers[childLayer][node.children[mid]].label;
 
         if (midVal == val) {
             return node.children[mid];
@@ -260,7 +260,7 @@ private:
         for (auto const &child : children) {
           // A ST node cannot have two sons with the same value, so we check
           int sonValue = layers[currentLayer +1][child].label;
-          std::optional<size_t> sameValueSon = hasSon(newNode, layers[currentLayer +1], sonValue);
+          std::optional<size_t> sameValueSon = hasSon(newNode, currentLayer + 1, sonValue);
           if (!sameValueSon.has_value()) {
             // Just add the node as son if all is well
             addSon(newNode, currentLayer+1, child);
@@ -415,7 +415,7 @@ public:
     auto children = buildLayer(vectorData, 1, elementVec);
     for (auto const &child : children[pref]) {
       int sonValue = layers[1][child].label;
-      std::optional<size_t> sameValueSon = hasSon(root, layers[1], sonValue);
+      std::optional<size_t> sameValueSon = hasSon(root, 1, sonValue);
       if (!sameValueSon.has_value()) {
         // Just add the node as son if all is well
         addSon(root, 1, child);
