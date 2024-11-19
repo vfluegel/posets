@@ -91,6 +91,7 @@ private:
 
     while (left <= right) {
         size_t mid = left + (right - left) / 2;
+        assert (mid < node.numchild);
         int midVal = layer[node.children[mid]].label;
 
         if (midVal == val) {
@@ -156,6 +157,7 @@ private:
     st_node& newNode = layers[destinationLayer][layer_nxt[destinationLayer]];
     newNode.label = node.label;
     newNode.isEnd = node.isEnd;
+    newNode.numchild = node.numchild;
     newNode.children = &child_buffer[cbuffer_nxt];
     cbuffer_nxt += k;
     for(size_t i = 0; i < node.numchild; i++) {
@@ -175,6 +177,7 @@ private:
     }
     else {
       newNode.label = node_s.label;
+      newNode.numchild = node_s.numchild;
       newNode.children = &child_buffer[cbuffer_nxt];
       cbuffer_nxt += k;
       size_t s_s{ 0 };
@@ -225,10 +228,14 @@ private:
 
     // We have built all layers, so we create the final layer with the EoL
     // node
-    if (currentLayer == static_cast<int>(this->dim + 1)) {
+    if (static_cast<size_t>(currentLayer) == this->dim + 1) {
+      assert (layer_nxt[currentLayer] < layer_size[currentLayer]);
       st_node& endNode = layers[currentLayer][layer_nxt[currentLayer]];
       endNode.isEnd = true;
       endNode.label = -1;
+      endNode.numchild = 0;
+      // FIXME: Don't we need to increase layer_nxt and possible reallocate
+      // memory?
 
       size_t endNodeID = addNode(endNode, currentLayer);
       for (auto const &[n, children] : layerData) {
@@ -252,9 +259,13 @@ private:
       // Create a node for each partition and add the children from that
       // partition
       for (auto const &[n, children] : childNodes) {
+        assert (layer_nxt[currentLayer] < layer_size[currentLayer]);
         st_node& newNode = layers[currentLayer][layer_nxt[currentLayer]];
         newNode.label = n.back();
+        newNode.numchild = 0;
+        assert (cbuffer_nxt < cbuffer_size);
         newNode.children = &child_buffer[cbuffer_nxt];
+        // FIXME: Unsafe! We should be checking for overflow and reallocating
         cbuffer_nxt += k;
 
         for (auto const &child : children) {
@@ -401,17 +412,31 @@ public:
 
   template <std::ranges::input_range R>
   size_t add_vectors(R&& elements) {
+    assert (layers != nullptr);
     st_node* rootLayer = layers[0];
+    assert (rootLayer != nullptr);
     st_node& root = rootLayer[layer_nxt[0]];
+    assert (cbuffer_nxt < cbuffer_size);
+    root.numchild = 0;
     root.children = &child_buffer[cbuffer_nxt];
+    // FIXME: This is not safe, we should be checking if it is possible or if
+    // we need to reallocate some memory
     cbuffer_nxt += k;
 
     auto elementVec = std::move(elements);
+    // We start a Trie encoded as a map from prefixes to sets of indices of
+    // the original vectors, we insert the root too: an empty prefix mapped to
+    // the set of all indices
     std::vector<size_t> vectorIds(elementVec.size());
     std::iota(vectorIds.begin(), vectorIds.end(), 0);
     std::vector<size_t> pref{};
     std::map<std::vector<size_t>, std::vector<size_t>> vectorData{
         {pref, vectorIds}};
+    // Now, we make a recursive call to build the next layer
+    // FIXME: instead of expecting recursive calls to return the children, so
+    // that we add them as such here, we can as the recursive call to create
+    // the node (if needed) and to adds the children too (this avoid
+    // copying/passing around vectors)
     auto children = buildLayer(vectorData, 1, elementVec);
     for (auto const &child : children[pref]) {
       int sonValue = layers[1][child].label;
