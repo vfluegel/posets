@@ -36,9 +36,12 @@ private:
   };
 
   struct st_hash {
+    sforest* f;
+    st_hash (sforest* that) : f{that} {}
+
     size_t operator()(const st_node &k) const {
       size_t res = std::hash<int>()(k.label);
-      size_t* children = child_buffer + k.cbuffer_offset;
+      size_t* children = f->child_buffer + k.cbuffer_offset;
       for (size_t i = 0; i < k.numchild; i++)
         res ^= std::hash<size_t>()(children[i]) << (i + 1);
       return res;
@@ -46,11 +49,14 @@ private:
   };
 
   struct st_equal {
+    sforest* f;
+    st_equal (sforest* that) : f{that} {}
+
     bool operator()(const st_node &lhs, const st_node &rhs) const {
       if (lhs.label != rhs.label or lhs.numchild != rhs.numchild)
         return false;
-      size_t* lhs_children = child_buffer + lhs.cbuffer_offset;
-      size_t* rhs_children = child_buffer + rhs.cbuffer_offset;
+      size_t* lhs_children = f->child_buffer + lhs.cbuffer_offset;
+      size_t* rhs_children = f->child_buffer + rhs.cbuffer_offset;
       for (size_t i = 0; i < lhs.numchild; i++)
         if (lhs_children[i] != rhs_children[i])
           return false;
@@ -65,7 +71,7 @@ private:
   size_t cbuffer_size;
   size_t cbuffer_nxt;
 
-  std::unordered_map<st_node, size_t, st_hash, st_equal> *inverse;
+  std::vector<std::unordered_map<st_node, size_t, st_hash, st_equal>> inverse;
 
   void init(int k, size_t dim) {
     this->k = k;
@@ -73,8 +79,9 @@ private:
     layers = new st_node *[dim+2];
     layer_size = new size_t[dim+2];
     layer_nxt = new size_t[dim+2];
-    inverse = new std::unordered_map<st_node, size_t, st_hash, st_equal>[dim+2];
-    for (size_t i = 0; i < dim+2; i++) {
+    for (size_t i = 0; i < dim + 2; i++)
+      inverse.emplace_back(42, st_hash(this), st_equal(this));
+    for (size_t i = 0; i < dim + 2; i++) {
       layer_size[i] = INIT_LAYER_SIZE;
       layers[i] = new st_node[layer_size[i]];
       layer_nxt[i] = 0;
@@ -333,7 +340,6 @@ public:
     delete[] layers;
     delete[] layer_size;
     delete[] layer_nxt;
-    delete[] inverse;
     delete[] child_buffer;
   }
 
