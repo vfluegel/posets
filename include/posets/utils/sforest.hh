@@ -80,7 +80,7 @@ private:
     layer_size = new size_t[dim+2];
     layer_nxt = new size_t[dim+2];
     for (size_t i = 0; i < dim + 2; i++)
-      inverse.emplace_back(42, st_hash(this), st_equal(this));
+      inverse.emplace_back(INIT_LAYER_SIZE, st_hash(this), st_equal(this));
     for (size_t i = 0; i < dim + 2; i++) {
       layer_size[i] = INIT_LAYER_SIZE;
       layers[i] = new st_node[layer_size[i]];
