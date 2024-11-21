@@ -236,66 +236,27 @@ private:
     return addNode(newNode, destinationLayer);
   }
 
-  std::map<std::vector<size_t>, std::vector<size_t>>
-  buildLayer(std::map<std::vector<size_t>, std::vector<size_t>> &layerData,
-             int currentLayer, const auto &elementVec) {
-    // Init result
-    std::map<std::vector<size_t>, std::vector<size_t>> resultNodes{};
-
-    // We have built all layers, so we create the final layer with the EoL
-    // node
-    if (static_cast<size_t>(currentLayer) == this->dim + 1) {
-      st_node endNode{-1, true, 0};
-
-      size_t endNodeID = addNode(endNode, currentLayer);
-      for (auto const &[n, children] : layerData) {
-        resultNodes[n].push_back(endNodeID);
+  size_t build_node(std::vector<size_t>& vecs, size_t currentLayer, const auto &elementVec) {
+    assert(vecs.size() > 0);
+    // If currentLayer is 0, we set the label to the dummy value -1 for the root
+    // Else all nodes should have the same value at index currentLayer - 1, so we just use the first
+    int label{ currentLayer == 0 ? -1 : static_cast<int>(elementVec[vecs[0]][currentLayer - 1]) };
+    st_node newNode{label, false, 0};
+    // We have not reached the last layer - so add children
+    if(currentLayer < this->dim) {
+      newNode.cbuffer_offset = addChildren();
+      std::map<typename V::value_type, std::vector<size_t>> newPartition{}; // Partition and order the future children
+      for (auto const &vec : vecs) {
+        newPartition[elementVec[vec][currentLayer]].push_back(vec);
       }
 
-    } else {
-      // Re-Partition the nodes based on a prefix with one more entry
-      std::map<std::vector<size_t>, std::vector<size_t>> newPartition{};
-      for (auto const &[n, children] : layerData) {
-        for (auto const &child : children) {
-          std::vector<size_t> newPrefix{n};
-          newPrefix.push_back(elementVec[child][currentLayer - 1]);
-          newPartition[newPrefix].push_back(child);
-        }
-      }
-
-      // Create the next Layer and fill it with the child nodes
-      auto childNodes = buildLayer(newPartition, currentLayer + 1, elementVec);
-
-      // Create a node for each partition and add the children from that
-      // partition
-      for (auto const &[n, children] : childNodes) {
-        st_node newNode{static_cast<int>(n.back()), false, 0, addChildren()};
-
-        for (auto const &child : children) {
-          // A ST node cannot have two sons with the same value, so we check
-          int sonValue = layers[currentLayer + 1][child].label;
-          std::optional<size_t> sameValueSon =
-              hasSon(newNode, currentLayer + 1, sonValue);
-          if (!sameValueSon.has_value()) {
-            // Just add the node as son if all is well
-            addSon(newNode, currentLayer + 1, child);
-          } else {
-            // If there already is a son with that value, remove it and
-            // compute a union-node of the two instead
-            size_t unionSon =
-                node_union(sameValueSon.value(), child, currentLayer + 1);
-            addSon(newNode, currentLayer + 1, unionSon);
-            // TODO: addSon is probably wrong here, need to replace the original
-          }
-        }
-        // Add the created node to the layer and insert it into the result set
-        std::vector<size_t> newPrefix{n};
-        newPrefix.pop_back();
-        resultNodes[newPrefix].push_back(addNode(newNode, currentLayer));
+      for (auto &[n, children] : newPartition) {
+        // Build a new son for each individual value at currentLayer + 1
+        size_t newSon = build_node(children, currentLayer + 1, elementVec);
+        addSon(newNode, currentLayer + 1, newSon);
       }
     }
-
-    return resultNodes;
+    return addNode(newNode, currentLayer);
   }
 
 public:
@@ -413,7 +374,6 @@ public:
 
   template <std::ranges::input_range R> size_t add_vectors(R &&elements) {
     assert(!layers.empty());
-    st_node root{-1, false, 0, addChildren()};
 
     auto elementVec = std::move(elements);
     // We start a Trie encoded as a map from prefixes to sets of indices of
@@ -421,31 +381,8 @@ public:
     // the set of all indices
     std::vector<size_t> vectorIds(elementVec.size());
     std::iota(vectorIds.begin(), vectorIds.end(), 0);
-    std::vector<size_t> pref{};
-    std::map<std::vector<size_t>, std::vector<size_t>> vectorData{
-        {pref, vectorIds}};
-    // Now, we make a recursive call to build the next layer
-    // FIXME: instead of expecting recursive calls to return the children, so
-    // that we add them as such here, we can as the recursive call to create
-    // the node (if needed) and to adds the children too (this avoid
-    // copying/passing around vectors)
-    auto children = buildLayer(vectorData, 1, elementVec);
-    for (auto const &child : children[pref]) {
-      int sonValue = layers[1][child].label;
-      std::optional<size_t> sameValueSon = hasSon(root, 1, sonValue);
-      if (!sameValueSon.has_value()) {
-        // Just add the node as son if all is well
-        addSon(root, 1, child);
-      } else {
-        // If there already is a son with that value, remove it and
-        // compute a union-node of the two instead
-        size_t unionSon = node_union(sameValueSon.value(), child, 1);
-        addSon(root, 1, unionSon);
-        // TODO: again probably need to replace instead of add
-      }
-    }
 
-    size_t root_id = addNode(root, 0);
+    size_t root_id = build_node(vectorIds, 0, elementVec);
     return root_id;
   }
 };
