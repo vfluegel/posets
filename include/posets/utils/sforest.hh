@@ -73,9 +73,9 @@ private:
   void init(int k, size_t dim) {
     this->k = k;
     this->dim = dim;
-    layers.resize(dim + 2);
+    layers.resize(dim + 1);
     
-    for (size_t i = 0; i < dim + 2; i++)
+    for (size_t i = 0; i < dim + 1; i++)
       inverse.emplace_back(INIT_LAYER_SIZE, st_hash(this), st_equal(this));
 
     cbuffer_size = INIT_LAYER_SIZE * (k + 1);
