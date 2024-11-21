@@ -30,7 +30,6 @@ private:
 
   struct st_node {
     int label;
-    bool isEnd;
     size_t numchild;
     size_t cbuffer_offset;
   };
@@ -173,7 +172,7 @@ private:
   }
 
   size_t copy(st_node &node, size_t destinationLayer) {
-    st_node newNode{node.label, node.isEnd, node.numchild, addChildren()};
+    st_node newNode{node.label, node.numchild, addChildren()};
 
     size_t *children = child_buffer + node.cbuffer_offset;
     for (size_t i = 0; i < node.numchild; i++) {
@@ -187,13 +186,9 @@ private:
   size_t node_union(size_t n_s, size_t n_t, size_t destinationLayer) {
     st_node &node_s = layers[destinationLayer][n_s];
     st_node &node_t = layers[destinationLayer][n_t];
-    st_node newNode{};
-    if (node_s.isEnd) {
-      newNode.isEnd = true;
-      newNode.numchild = 0;
-    } else {
-      newNode.label = node_s.label;
-      newNode.numchild = node_s.numchild;
+    st_node newNode{node_s.label, node_s.numchild};
+    // We haven't reached the bottom of the tree, we need to add children
+    if (destinationLayer < this->dim) {
       newNode.cbuffer_offset = addChildren();
       size_t s_s{0};
       size_t s_t{0};
@@ -241,7 +236,7 @@ private:
     // If currentLayer is 0, we set the label to the dummy value -1 for the root
     // Else all nodes should have the same value at index currentLayer - 1, so we just use the first
     int label{ currentLayer == 0 ? -1 : static_cast<int>(elementVec[vecs[0]][currentLayer - 1]) };
-    st_node newNode{label, false, 0};
+    st_node newNode{label, 0};
     // We have not reached the last layer - so add children
     if(currentLayer < this->dim) {
       newNode.cbuffer_offset = addChildren();
