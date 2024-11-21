@@ -28,6 +28,8 @@ int main(int argc, char const *argv[])
     std::cout << f << std::endl;
     std::vector<char> v = {2, 2, 2};
     assert(f.cover_vector(idcs, VType (std::move(v))));
+    std::vector<char> w = {9, 4, 8};
+    assert(!f.cover_vector(idcs, VType (std::move(w))));
     
     return 0;
 }

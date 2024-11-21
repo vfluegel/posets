@@ -31,8 +31,8 @@ private:
   struct st_node {
     int label;
     bool isEnd;
-    size_t cbuffer_offset;
     size_t numchild;
+    size_t cbuffer_offset;
   };
 
   struct st_hash {
@@ -64,12 +64,7 @@ private:
     }
   };
 
-  // FIXME: From here
-  st_node **layers;
-  size_t *layer_size;
-  size_t *layer_nxt;
-  // until here, replace by std::array<std::vector<st_node>> and forget about
-  // memory management for this! :D
+  std::vector<std::vector<st_node>> layers;
   size_t *child_buffer;
   size_t cbuffer_size;
   size_t cbuffer_nxt;
@@ -79,16 +74,11 @@ private:
   void init(int k, size_t dim) {
     this->k = k;
     this->dim = dim;
-    layers = new st_node *[dim + 2];
-    layer_size = new size_t[dim + 2];
-    layer_nxt = new size_t[dim + 2];
+    layers.resize(dim + 2);
+    
     for (size_t i = 0; i < dim + 2; i++)
       inverse.emplace_back(INIT_LAYER_SIZE, st_hash(this), st_equal(this));
-    for (size_t i = 0; i < dim + 2; i++) {
-      layer_size[i] = INIT_LAYER_SIZE;
-      layers[i] = new st_node[layer_size[i]];
-      layer_nxt[i] = 0;
-    }
+
     cbuffer_size = INIT_LAYER_SIZE * (k + 1);
     child_buffer = new size_t[cbuffer_size];
     cbuffer_nxt = 0;
@@ -153,9 +143,9 @@ private:
   size_t addNode(st_node &node, size_t destinationLayer) {
     auto existingNode = inverse[destinationLayer].find(node);
     if (existingNode == inverse[destinationLayer].end()) {
-      size_t newID = layer_nxt[destinationLayer];
+      size_t newID = layers[destinationLayer].size();
       inverse[destinationLayer][node] = newID;
-      layer_nxt[destinationLayer]++;
+      layers[destinationLayer].push_back(node);
       return newID;
     } else {
       return existingNode->second;
@@ -183,11 +173,7 @@ private:
   }
 
   size_t copy(st_node &node, size_t destinationLayer) {
-    st_node &newNode = layers[destinationLayer][layer_nxt[destinationLayer]];
-    newNode.label = node.label;
-    newNode.isEnd = node.isEnd;
-    newNode.numchild = node.numchild;
-    newNode.cbuffer_offset = addChildren();
+    st_node newNode{node.label, node.isEnd, node.numchild, addChildren()};
 
     size_t *children = child_buffer + node.cbuffer_offset;
     for (size_t i = 0; i < node.numchild; i++) {
@@ -201,9 +187,10 @@ private:
   size_t node_union(size_t n_s, size_t n_t, size_t destinationLayer) {
     st_node &node_s = layers[destinationLayer][n_s];
     st_node &node_t = layers[destinationLayer][n_t];
-    st_node &newNode = layers[destinationLayer][layer_nxt[destinationLayer]];
+    st_node newNode{};
     if (node_s.isEnd) {
       newNode.isEnd = true;
+      newNode.numchild = 0;
     } else {
       newNode.label = node_s.label;
       newNode.numchild = node_s.numchild;
@@ -258,13 +245,7 @@ private:
     // We have built all layers, so we create the final layer with the EoL
     // node
     if (static_cast<size_t>(currentLayer) == this->dim + 1) {
-      assert(layer_nxt[currentLayer] < layer_size[currentLayer]);
-      st_node &endNode = layers[currentLayer][layer_nxt[currentLayer]];
-      endNode.isEnd = true;
-      endNode.label = -1;
-      endNode.numchild = 0;
-      // FIXME: Don't we need to increase layer_nxt and possible reallocate
-      // memory?
+      st_node endNode{-1, true, 0};
 
       size_t endNodeID = addNode(endNode, currentLayer);
       for (auto const &[n, children] : layerData) {
@@ -288,11 +269,7 @@ private:
       // Create a node for each partition and add the children from that
       // partition
       for (auto const &[n, children] : childNodes) {
-        assert(layer_nxt[currentLayer] < layer_size[currentLayer]);
-        st_node &newNode = layers[currentLayer][layer_nxt[currentLayer]];
-        newNode.label = n.back();
-        newNode.numchild = 0;
-        newNode.cbuffer_offset = addChildren();
+        st_node newNode{static_cast<int>(n.back()), false, 0, addChildren()};
 
         for (auto const &child : children) {
           // A ST node cannot have two sons with the same value, so we check
@@ -322,7 +299,7 @@ private:
   }
 
 public:
-  sforest() : layers{nullptr} {}
+  sforest() {}
 
   sforest(int k, size_t dim) {
     assert(dim >= 2);
@@ -330,14 +307,9 @@ public:
   }
 
   ~sforest() {
-    if (layers == nullptr)
+    if (layers.empty())
       return;
 
-    for (size_t i = 0; i < dim; i++)
-      delete[] layers[i];
-    delete[] layers;
-    delete[] layer_size;
-    delete[] layer_nxt;
     delete[] child_buffer;
   }
 
@@ -346,7 +318,7 @@ public:
     std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
 
     // Add all roots at dimension 0
-    for (size_t i = 0; i < layer_nxt[1]; i++)
+    for (size_t i = 0; i < layers[1].size(); i++)
       to_visit.push({1, i, 0});
 
     std::vector<V> res;
@@ -394,7 +366,7 @@ public:
     st_node &rootNode = layers[0][root];
     size_t *root_children = child_buffer + rootNode.cbuffer_offset;
     for (size_t i = 0; i < rootNode.numchild; i++) {
-      assert(root_children[i] < layer_nxt[1]);
+      assert(root_children[i] < layers[1].size());
       if (covered[0] <= layers[1][root_children[i]].label)
         to_visit.push({1, root_children[i], 0});
     }
@@ -440,13 +412,8 @@ public:
   }
 
   template <std::ranges::input_range R> size_t add_vectors(R &&elements) {
-    assert(layers != nullptr);
-    st_node *rootLayer = layers[0];
-    assert(rootLayer != nullptr);
-    st_node &root = rootLayer[layer_nxt[0]];
-    root.numchild = 0;
-    root.cbuffer_offset = addChildren();
-    root.label = -1;
+    assert(!layers.empty());
+    st_node root{-1, false, 0, addChildren()};
 
     auto elementVec = std::move(elements);
     // We start a Trie encoded as a map from prefixes to sets of indices of
