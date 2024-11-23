@@ -162,9 +162,9 @@ private:
     st_node &sonNode = layers[sonLayer][son];
     size_t *children = child_buffer + node.cbuffer_offset;
 
-    // the new node is larger than all existing ones
+    // the new node is smaller than all existing ones
     assert(last == -1 or
-           layers[sonLayer][children[last]].label < sonNode.label);
+           layers[sonLayer][children[last]].label > sonNode.label);
 
     // Insert the new value
     children[last + 1] = son;
@@ -328,7 +328,7 @@ private:
       // TODO: Try to do constant-access bucketing based on the value of k.
       // Probably won't pay off unless the set of vectors we are adding is
       // dense in most components.
-      std::map<typename V::value_type, std::vector<size_t>>
+      std::map<typename V::value_type, std::vector<size_t>, std::greater<typename V::value_type> >
           newPartition{}; // Partition and order the future children
       for (auto const &vec : vecs) {
         newPartition[elementVec[vec][currentLayer]].push_back(vec);
