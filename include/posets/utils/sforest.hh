@@ -25,6 +25,9 @@ std::ostream &operator<<(std::ostream &os, const utils::sforest<V> &f);
 
 template <Vector V> class sforest {
 private:
+  template <Vector V2>
+  friend std::ostream &operator<<(std::ostream &os, const utils::sforest<V2> &f);
+
   int k;
   size_t dim;
 
@@ -108,6 +111,42 @@ private:
     return std::nullopt;
   }
 
+  /*
+   Simulation: check if n1 simulates n2
+  */
+  bool simulates(st_node &n1, st_node &n2, size_t sonLayer) {
+    // If the node is in the last layer, we just check the labels
+    if(sonLayer == this->dim + 1) {
+      return n1.label >= n2.label;
+    }
+    size_t* n1_children = child_buffer + n1.cbuffer_offset;
+    size_t* n2_children = child_buffer + n2.cbuffer_offset;
+    if(n1.label < n2.label || 
+        layers[sonLayer][n1_children[0]].label < layers[sonLayer][n2_children[n2.numchild - 1]].label)
+    {
+      // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
+      // we already know it can't simulate
+      return false;
+    }
+
+    // Check if we can find a corresponding son of n1 for every son of n2
+    for (size_t s2 = 0; s2 < n2.numchild; s2++)
+    {
+      bool found = false;
+      for (size_t s1 = 0; s1 < n1.numchild; s1++)
+      {
+        if(simulates(layers[sonLayer][n1_children[s1]], layers[sonLayer][n2_children[s2]], sonLayer + 1)) {
+          found = true;
+          break;
+        }
+      }
+      // We checked all sons of n1 and there was no match, it can't simulate
+      if(!found) return false;
+    }
+
+    return true;
+  }
+
   void addSon(st_node &node, size_t sonLayer, size_t son) {
     // Find the insertion point using binary search
     int left = 0;
@@ -123,7 +162,7 @@ private:
         // directly
         assert(false);
         return;
-      } else if (sonNode.label < midVal) {
+      } else if (sonNode.label > midVal) {
         right = mid - 1;
       } else {
         left = mid + 1;
@@ -171,22 +210,21 @@ private:
     // Maybe not even necessary? Otherwise need a replaceSon function
   }
 
-  size_t copy(st_node &node, size_t destinationLayer) {
-    st_node newNode{node.label, node.numchild, addChildren()};
-
-    size_t *children = child_buffer + node.cbuffer_offset;
-    for (size_t i = 0; i < node.numchild; i++) {
-      st_node &childNode = layers[destinationLayer + 1][children[i]];
-      size_t newSon = copy(childNode, destinationLayer + 1);
-      addSon(newNode, destinationLayer + 1, newSon);
+  std::optional<size_t> add_if_not_simulated(st_node &node, size_t destinationLayer, st_node &father) {
+    size_t* siblings = child_buffer + father.cbuffer_offset;
+    for(size_t s = 0; s < father.numchild; s++) {
+      if(simulates(layers[destinationLayer][siblings[s]], node, destinationLayer + 1)) {
+        return std::nullopt;
+      }
     }
-    return addNode(newNode, destinationLayer);
+
+    return addNode(node, destinationLayer);
   }
 
   size_t node_union(size_t n_s, size_t n_t, size_t destinationLayer) {
     st_node &node_s = layers[destinationLayer][n_s];
     st_node &node_t = layers[destinationLayer][n_t];
-    st_node newNode{node_s.label, node_s.numchild};
+    st_node newNode{node_s.label, 0};
     // We haven't reached the bottom of the tree, we need to add children
     if (destinationLayer < this->dim) {
       newNode.cbuffer_offset = addChildren();
@@ -200,13 +238,17 @@ private:
         // Case one: One of the lists is done iterating, copy the nodes
         // without match
         st_node &son_s = layers[destinationLayer + 1][node_s_children[s_s]];
-        st_node &son_t = layers[destinationLayer + 1][node_s_children[s_t]];
+        st_node &son_t = layers[destinationLayer + 1][node_t_children[s_t]];
         if (s_s == node_s.numchild) {
-          newChild = copy(son_t, destinationLayer + 1);
+          auto copyRes = add_if_not_simulated(son_t, destinationLayer + 1, newNode);
           s_t++;
+          if(!copyRes.has_value()) continue;
+          newChild = copyRes.value();
         } else if (s_t == node_t.numchild) {
-          newChild = copy(son_s, destinationLayer + 1);
+          auto copyRes = add_if_not_simulated(son_s, destinationLayer + 1, newNode);
           s_s++;
+          if(!copyRes.has_value()) continue;
+          newChild = copyRes.value();
         }
         // Case two: The values are identical, we union the two nodes
         else if (son_s.label == son_t.label) {
@@ -217,18 +259,57 @@ private:
         }
         // Case three: One of the lists is "ahead", we know because the nodes
         // in a layer are ordered
-        else if (node_s.label > node_t.label) {
-          newChild = copy(son_s, destinationLayer + 1);
+        else if (son_s.label > son_t.label) {
+          auto copyRes = add_if_not_simulated(son_s, destinationLayer + 1, newNode);
           s_s++;
+          if(!copyRes.has_value()) continue;
+          newChild = copyRes.value();
         } else {
-          newChild = copy(son_t, destinationLayer + 1);
+          auto copyRes = add_if_not_simulated(son_t, destinationLayer + 1, newNode);
           s_t++;
+          if(!copyRes.has_value()) continue;
+          newChild = copyRes.value();
         }
 
         addSon(newNode, destinationLayer + 1, newChild);
       }
     }
     return addNode(newNode, destinationLayer);
+  }
+
+  std::optional<size_t> node_intersect(size_t n_s, size_t n_t, size_t destinationLayer, std::optional<st_node> father) {
+    st_node &node_s = layers[destinationLayer][n_s];
+    st_node &node_t = layers[destinationLayer][n_t];
+    st_node newNode{std::min(node_s.label, node_t.label), 0};
+    // We haven't reached the bottom of the tree, we need to add children
+    if(destinationLayer < this->dim) {
+      newNode.cbuffer_offset = addChildren();
+
+      size_t *node_s_children = child_buffer + node_s.cbuffer_offset;
+      size_t *node_t_children = child_buffer + node_t.cbuffer_offset;
+      for (size_t s_s = 0; s_s < node_s.numchild; s_s++)
+      {
+        for (size_t s_t = 0; s_t < node_t.numchild; s_t++)
+        {
+          auto intersectRes = node_intersect(node_s_children[s_s], node_t_children[s_t],
+                                destinationLayer + 1, newNode);
+          if(intersectRes.has_value()) {
+            addSon(newNode, destinationLayer + 1, intersectRes.value());
+          }
+        }
+      }
+      
+      if(newNode.numchild == 0) {
+        return std::nullopt;
+      }
+    }
+    if(father.has_value()) {
+      return add_if_not_simulated(newNode, destinationLayer, father.value());
+    }
+    else {
+      return addNode(newNode, destinationLayer);
+    }
+    
   }
 
   size_t build_node(std::vector<size_t>& vecs, size_t currentLayer, const auto &elementVec) {
@@ -313,6 +394,29 @@ public:
     return res;
   }
 
+  void print_children(size_t n, size_t layer) {
+    assert(layer <= this->dim);
+    st_node& node = layers[layer][n];
+    size_t* children = child_buffer + node.cbuffer_offset;
+    std::cout << layer << "." << n << " [" << node.label << "] -> ( ";
+    for (size_t i = 0; i < node.numchild; i++)
+    {
+      print_children(children[i], layer + 1);
+      if(i < node.numchild -1) {
+        std::cout << ", ";
+      }
+    }
+    std::cout << " ) ";
+  }
+
+  size_t st_union(size_t root1, size_t root2) {
+    return node_union(root1, root2, 0);
+  }
+
+  size_t st_intersect(size_t root1, size_t root2) {
+    return node_intersect(root1, root2, 0, std::nullopt).value();
+  }
+
   bool cover_vector(size_t root, V covered) {
     // Stack with tuples (layer, node id, child id)
     std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
@@ -388,7 +492,15 @@ inline std::ostream &operator<<(std::ostream &os, const sforest<V> &f) {
   for (auto &&el : f.get_all())
     os << el << std::endl;
 
+  os << "Layers:" << std::endl;
+  for(auto& l : f.layers) {
+    for(auto& n: l) {
+      os << n.label << " ";
+    }
+    os << std::endl;
+  }
   return os;
+
 }
 
 } // namespace posets::utils
