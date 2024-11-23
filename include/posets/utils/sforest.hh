@@ -15,6 +15,11 @@
 
 namespace posets::utils {
 
+// We will be (micro)managing (C-style) dynamic memory for the set of nodes we
+// keep in each layer. The initial number of nodes allowed is determined by
+// the number below (multiplied by the number of layers = the dimension + 1).
+// When the buffer is full, we double its capacity and copy everything to the
+// new block of reserved memory.
 size_t INIT_LAYER_SIZE = 100;
 
 // Forward definition for the operator<<
@@ -34,6 +39,11 @@ private:
     size_t cbuffer_offset;
   };
 
+  // NOTE: We will be keeping a unique table of st_nodes using an unordered
+  // map, for this we need a hash function and an equivalence operation.
+  // Since nodes keep offsets instead of pointers, we need both the hash and
+  // equivalence operations to be able to access the unique table. Hence, we
+  // keep a reference to the table in them.
   struct st_hash {
     sforest *f;
     st_hash(sforest *that) : f{that} {}
@@ -74,7 +84,7 @@ private:
     this->k = k;
     this->dim = dim;
     layers.resize(dim + 1);
-    
+
     for (size_t i = 0; i < dim + 1; i++)
       inverse.emplace_back(INIT_LAYER_SIZE, st_hash(this), st_equal(this));
 
@@ -109,33 +119,16 @@ private:
   }
 
   void addSon(st_node &node, size_t sonLayer, size_t son) {
-    // Find the insertion point using binary search
-    int left = 0;
-    int right = node.numchild - 1;
+    int last = node.numchild - 1;
     st_node &sonNode = layers[sonLayer][son];
     size_t *children = child_buffer + node.cbuffer_offset;
-    while (left <= right) {
-      int mid = left + (right - left) / 2;
-      int midVal = layers[sonLayer][children[mid]].label;
 
-      if (sonNode.label == midVal) {
-        // This is not supposed to happen -> may add the union approach here
-        // directly
-        assert(false);
-        return;
-      } else if (sonNode.label < midVal) {
-        right = mid - 1;
-      } else {
-        left = mid + 1;
-      }
-    }
-    // Shift elements in the child buffer to make room for the new child
-    for (int i = node.numchild; i > left; i--) {
-      children[i] = children[i - 1];
-    }
+    // the new node is larger than all existing ones
+    assert(last == -1 or
+           layers[sonLayer][children[last]].label < sonNode.label);
 
     // Insert the new value
-    children[left] = son;
+    children[last + 1] = son;
     node.numchild++;
   }
 
@@ -167,80 +160,24 @@ private:
     return res;
   }
 
-  void removeSon(st_node &node, st_node *layer, size_t son) {
-    // Maybe not even necessary? Otherwise need a replaceSon function
-  }
-
-  size_t copy(st_node &node, size_t destinationLayer) {
-    st_node newNode{node.label, node.numchild, addChildren()};
-
-    size_t *children = child_buffer + node.cbuffer_offset;
-    for (size_t i = 0; i < node.numchild; i++) {
-      st_node &childNode = layers[destinationLayer + 1][children[i]];
-      size_t newSon = copy(childNode, destinationLayer + 1);
-      addSon(newNode, destinationLayer + 1, newSon);
-    }
-    return addNode(newNode, destinationLayer);
-  }
-
-  size_t node_union(size_t n_s, size_t n_t, size_t destinationLayer) {
-    st_node &node_s = layers[destinationLayer][n_s];
-    st_node &node_t = layers[destinationLayer][n_t];
-    st_node newNode{node_s.label, node_s.numchild};
-    // We haven't reached the bottom of the tree, we need to add children
-    if (destinationLayer < this->dim) {
-      newNode.cbuffer_offset = addChildren();
-      size_t s_s{0};
-      size_t s_t{0};
-      size_t newChild;
-
-      size_t *node_s_children = child_buffer + node_s.cbuffer_offset;
-      size_t *node_t_children = child_buffer + node_t.cbuffer_offset;
-      while (s_s < node_s.numchild || s_t < node_t.numchild) {
-        // Case one: One of the lists is done iterating, copy the nodes
-        // without match
-        st_node &son_s = layers[destinationLayer + 1][node_s_children[s_s]];
-        st_node &son_t = layers[destinationLayer + 1][node_s_children[s_t]];
-        if (s_s == node_s.numchild) {
-          newChild = copy(son_t, destinationLayer + 1);
-          s_t++;
-        } else if (s_t == node_t.numchild) {
-          newChild = copy(son_s, destinationLayer + 1);
-          s_s++;
-        }
-        // Case two: The values are identical, we union the two nodes
-        else if (son_s.label == son_t.label) {
-          newChild = node_union(node_s_children[s_s], node_t_children[s_t],
-                                destinationLayer + 1);
-          s_s++;
-          s_t++;
-        }
-        // Case three: One of the lists is "ahead", we know because the nodes
-        // in a layer are ordered
-        else if (node_s.label > node_t.label) {
-          newChild = copy(son_s, destinationLayer + 1);
-          s_s++;
-        } else {
-          newChild = copy(son_t, destinationLayer + 1);
-          s_t++;
-        }
-
-        addSon(newNode, destinationLayer + 1, newChild);
-      }
-    }
-    return addNode(newNode, destinationLayer);
-  }
-
-  size_t build_node(std::vector<size_t>& vecs, size_t currentLayer, const auto &elementVec) {
+  size_t build_node(std::vector<size_t> &vecs, size_t currentLayer,
+                    const auto &elementVec) {
     assert(vecs.size() > 0);
     // If currentLayer is 0, we set the label to the dummy value -1 for the root
-    // Else all nodes should have the same value at index currentLayer - 1, so we just use the first
-    int label{ currentLayer == 0 ? -1 : static_cast<int>(elementVec[vecs[0]][currentLayer - 1]) };
+    // Else all nodes should have the same value at index currentLayer - 1, so
+    // we just use the first
+    int label{currentLayer == 0
+                  ? -1
+                  : static_cast<int>(elementVec[vecs[0]][currentLayer - 1])};
     st_node newNode{label, 0};
     // We have not reached the last layer - so add children
-    if(currentLayer < this->dim) {
+    if (currentLayer < this->dim) {
       newNode.cbuffer_offset = addChildren();
-      std::map<typename V::value_type, std::vector<size_t>> newPartition{}; // Partition and order the future children
+      // TODO: Try to do constact-access bucketing based on the value of k.
+      // Probably won't pay off unless the set of vectors we are adding is
+      // dense in most components.
+      std::map<typename V::value_type, std::vector<size_t>>
+          newPartition{}; // Partition and order the future children
       for (auto const &vec : vecs) {
         newPartition[elementVec[vec][currentLayer]].push_back(vec);
       }
@@ -348,20 +285,25 @@ public:
         if (c == 0) {
           size_t i = parent.numchild - 1;
           auto child_node = layers[lay + 1][children[i]];
-          // find the first index where the order holds
-          // FIXME: this could be a binary search
+          // early exit if the largest child is smaller
           if (covered[lay + 1] > child_node.label)
             continue;
-          do {
-            child_node = layers[lay + 1][children[c]];
-            c++;
-          } while (covered[lay + 1] > child_node.label);
-          c--;
+          // otherwise, we find the first index where the order holds
+          int left = 0;
+          int right = parent.numchild - 2;
+          while (left <= right) {
+            int mid = left + (right - left) / 2;
+            int midVal = layers[lay + 1][children[mid]].label;
+            if (covered[lay + 1] <= midVal)
+              right = mid - 1;
+            else
+              left = mid + 1;
+          }
+          c = left;
         }
-        if (c < parent.numchild) {
-          to_visit.push({lay, node, c + 1});
-          to_visit.push({lay + 1, children[c], 0});
-        }
+        assert(c < parent.numchild);
+        to_visit.push({lay, node, c + 1});
+        to_visit.push({lay + 1, children[c], 0});
       }
     }
     return false;
@@ -382,7 +324,6 @@ public:
   }
 };
 
-// FIXME: This has to be built recursively from the forest
 template <Vector V>
 inline std::ostream &operator<<(std::ostream &os, const sforest<V> &f) {
   for (auto &&el : f.get_all())
