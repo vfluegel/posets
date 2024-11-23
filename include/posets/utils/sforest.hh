@@ -144,9 +144,9 @@ private:
     }
   }
 
-  size_t addChildren() {
+  size_t addChildren(int numChild) {
     // Double the child buffer if it is full
-    if (cbuffer_nxt + k >= cbuffer_size) {
+    if (cbuffer_nxt + numChild >= cbuffer_size) {
       size_t *newBuffer = new size_t[cbuffer_size * 2];
       for (size_t i = 0; i < cbuffer_size; i++) {
         newBuffer[i] = child_buffer[i];
@@ -156,7 +156,7 @@ private:
       child_buffer = newBuffer;
     }
     size_t res = cbuffer_nxt;
-    cbuffer_nxt += k;
+    cbuffer_nxt += numChild;
     return res;
   }
 
@@ -172,7 +172,6 @@ private:
     st_node newNode{label, 0};
     // We have not reached the last layer - so add children
     if (currentLayer < this->dim) {
-      newNode.cbuffer_offset = addChildren();
       // TODO: Try to do constact-access bucketing based on the value of k.
       // Probably won't pay off unless the set of vectors we are adding is
       // dense in most components.
@@ -181,6 +180,7 @@ private:
       for (auto const &vec : vecs) {
         newPartition[elementVec[vec][currentLayer]].push_back(vec);
       }
+      newNode.cbuffer_offset = addChildren(newPartition.size());
 
       for (auto &[n, children] : newPartition) {
         // Build a new son for each individual value at currentLayer + 1
