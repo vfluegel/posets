@@ -160,6 +160,18 @@ private:
     return res;
   }
 
+  /* Recursive creation of nodes of Trie while using the inverse map to avoid
+   * creating duplicate nodes in terms of (residual/right) language. This
+   * results on the creation of the minimal DFA for the set of vectors.
+   *
+   * Complexity: The implementation below has complexity n d lg(n) where n is
+   * the number of vectors, d is the number of dimensions. The nd factor is
+   * nor surprising: it already corresponds to the set of prefixes of the set
+   * of vectors. The lg(n) factor comes from the use of an (ordered) map at
+   * every recursive step to (re)partition the vectors for the children based
+   * on the list itself. It can be traded off by a factor of k (see TODO in
+   * code).
+   */
   size_t build_node(std::vector<size_t> &vecs, size_t currentLayer,
                     const auto &elementVec) {
     assert(vecs.size() > 0);
@@ -172,7 +184,7 @@ private:
     st_node newNode{label, 0};
     // We have not reached the last layer - so add children
     if (currentLayer < this->dim) {
-      // TODO: Try to do constact-access bucketing based on the value of k.
+      // TODO: Try to do constant-access bucketing based on the value of k.
       // Probably won't pay off unless the set of vectors we are adding is
       // dense in most components.
       std::map<typename V::value_type, std::vector<size_t>>
