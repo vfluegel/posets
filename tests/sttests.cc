@@ -53,5 +53,13 @@ int main(int argc, char const *argv[]) {
   v = {8, 5, 3};
   assert(not f.covers_vector(idcs2, VType(std::move(v))));
 
+  auto uRoot = f.st_union(idcs, idcs2);
+  f.print_children(uRoot, 0);
+  std::cout << std::endl;
+
+  auto iRoot = f.st_intersect(idcs, idcs2);
+  f.print_children(iRoot, 0);
+  std::cout << std::endl;
+
   return 0;
 }
