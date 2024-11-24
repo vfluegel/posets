@@ -164,7 +164,7 @@ private:
    * creating duplicate nodes in terms of (residual/right) language. This
    * results on the creation of the minimal DFA for the set of vectors.
    *
-   * Complexity: The implementation below has complexity n d lg(n) where n is
+   * Complexity: The implementation below has complexity O(n.d.lg(n)) where n is
    * the number of vectors, d is the number of dimensions. The nd factor is
    * nor surprising: it already corresponds to the set of prefixes of the set
    * of vectors. The lg(n) factor comes from the use of an (ordered) map at
@@ -218,13 +218,17 @@ public:
     delete[] child_buffer;
   }
 
-  std::vector<V> get_all() const {
+  std::vector<V> get_all(std::optional<size_t> root={}) const {
     // Stack with tuples (layer, node id, child id)
     std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
 
-    // Add all roots at dimension 0
-    for (size_t i = 0; i < layers[1].size(); i++)
-      to_visit.push({1, i, 0});
+    if (root) {
+      to_visit.push({1, root.value(), 0});
+    } else {
+      // Add all roots at dimension 0
+      for (size_t i = 0; i < layers[1].size(); i++)
+        to_visit.push({1, i, 0});
+    }
 
     std::vector<V> res;
     std::vector<typename V::value_type> temp;
@@ -262,7 +266,16 @@ public:
     return res;
   }
 
-  bool cover_vector(size_t root, V covered) {
+  /* Recursive domination check of given vector by vectors in the language of
+   * the given tree root.
+   *
+   * Complexity: The implementation below has complexity O(n.d) where n is
+   * the number of vectors, d is the number of dimensions. This is the same as
+   * list-based data structures for vectors. However, since it is a DFS of the
+   * DFA representation of (bisimulation non-dominated) vectors, it could be
+   * exponentially faster than this.
+   */
+  bool covers_vector(size_t root, V covered) {
     // Stack with tuples (layer, node id, child id)
     std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
 
@@ -278,8 +291,11 @@ public:
 
     while (to_visit.size() > 0) {
       const auto [lay, node, child] = to_visit.top();
+      assert(lay < this->dim);
+      assert(node < layers[lay].size());
       to_visit.pop();
       const auto parent = layers[lay][node];
+      assert(child < parent.numchild);
       size_t *children = child_buffer + parent.cbuffer_offset;
 
       // base case: reached the bottom layer
@@ -314,7 +330,8 @@ public:
           c = left;
         }
         assert(c < parent.numchild);
-        to_visit.push({lay, node, c + 1});
+        if (c + 1 < parent.numchild)
+          to_visit.push({lay, node, c + 1});
         to_visit.push({lay + 1, children[c], 0});
       }
     }
