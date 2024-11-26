@@ -111,7 +111,7 @@ private:
 
       if (midVal == val) {
         return children[mid];
-      } else if (midVal < val) {
+      } else if (midVal > val) {
         left = mid + 1;
       } else {
         right = mid - 1;
@@ -335,10 +335,19 @@ private:
       }
       newNode.cbuffer_offset = addChildren(newPartition.size());
 
+      size_t* currentChildren = child_buffer + newNode.cbuffer_offset;
       for (auto &[n, children] : newPartition) {
         // Build a new son for each individual value at currentLayer + 1
         size_t newSon = build_node(children, currentLayer + 1, elementVec);
-        addSon(newNode, currentLayer + 1, newSon);
+        bool found = false;
+        for (size_t s = 0; s < newNode.numchild; s++)
+        {
+          if(simulates(layers[currentLayer + 1][currentChildren[s]], layers[currentLayer + 1][newSon], currentLayer + 2)) {
+            found = true;
+            break;
+          }
+        }
+        if(!found) addSon(newNode, currentLayer + 1, newSon);
       }
     }
     return addNode(newNode, currentLayer);
@@ -465,34 +474,19 @@ public:
       // base case: reached the bottom layer
       if (lay == this->dim - 1) {
         assert(child == 0);
-        // it is sufficient to check the last child
-        size_t i = parent.numchild - 1;
-        auto bottom_node = layers[lay + 1][children[i]];
+        // it is sufficient to check the first child
+        auto bottom_node = layers[lay + 1][children[0]];
         if (covered[lay] <= bottom_node.label)
           return true;
       } else { // recursive case
         // Either we're done with this node and we just mark it as visited or
         // we need to keep it and we add it's next son
         size_t c = child;
-        if (c == 0) {
-          size_t i = parent.numchild - 1;
-          auto child_node = layers[lay + 1][children[i]];
-          // early exit if the largest child is smaller
-          if (covered[lay + 1] > child_node.label)
-            continue;
-          // otherwise, we find the first index where the order holds
-          int left = 0;
-          int right = parent.numchild - 2;
-          while (left <= right) {
-            int mid = left + (right - left) / 2;
-            int midVal = layers[lay + 1][children[mid]].label;
-            if (covered[lay + 1] <= midVal)
-              right = mid - 1;
-            else
-              left = mid + 1;
-          }
-          c = left;
-        }
+        auto child_node = layers[lay + 1][children[c]];
+        // early exit if the largest child is smaller
+        if (covered[lay + 1] > child_node.label)
+          continue;
+        
         assert(c < parent.numchild);
         if (c + 1 < parent.numchild)
           to_visit.push({lay, node, c + 1});
