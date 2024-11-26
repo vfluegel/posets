@@ -83,11 +83,11 @@ namespace posets::downsets {
 
       kdtree_backed () = delete;
 
-      kdtree_backed (std::vector<V>&& elements) noexcept {
+      kdtree_backed (std::vector<V>&& elements, unsigned k=0) noexcept {
         reset_tree (std::move (elements));
       }
 
-      kdtree_backed (V&& e) :
+      kdtree_backed (V&& e, unsigned k=0) :
         tree ( std::array<V, 1> { std::move (e) } )
       {}
 

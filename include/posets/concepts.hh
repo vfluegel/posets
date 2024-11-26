@@ -26,10 +26,10 @@ namespace posets {
   template <typename T, typename V = typename T::value_type>
   concept Downset = std::ranges::range<T> and
     not std::is_default_constructible_v<T> and
-    //std::is_constructible_v<T, size_t> and          // give the dimension
-    //std::is_constructible_v<T, size_t, size_t> and  // and give the size guess
-    std::is_constructible_v<T, V&&> and
-    std::is_constructible_v<T, std::vector<V>&&> and
+    // NOTE: Constructors take a vector, or vector of vectors, and a bound on
+    // the infinity-norm
+    std::is_constructible_v<T, V&&, unsigned> and
+    std::is_constructible_v<T, std::vector<V>&&, unsigned> and
     not std::is_copy_constructible_v<T> and
     not std::is_copy_assignable_v<T> and
     std::is_move_constructible_v<T> and
