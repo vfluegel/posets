@@ -16,12 +16,12 @@ namespace posets::downsets {
     public:
       typedef V value_type;
 
-      vector_backed_bin (V&& v) {
+      vector_backed_bin (V&& v, unsigned k=0) {
         vector_set.resize (v.size ());
         insert (std::move (v));
       }
 
-      vector_backed_bin (std::vector<V>&& elements) noexcept {
+      vector_backed_bin (std::vector<V>&& elements, unsigned k=0) noexcept {
         assert (elements.size() > 0);
         vector_set.resize (elements[0].size ());
         for (auto&& e : elements)

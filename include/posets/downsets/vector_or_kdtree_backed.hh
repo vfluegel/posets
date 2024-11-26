@@ -126,7 +126,7 @@ namespace posets::downsets {
 
       vector_or_kdtree_backed () = delete;
 
-      vector_or_kdtree_backed (std::vector<V>&& elements) noexcept {
+      vector_or_kdtree_backed (std::vector<V>&& elements, unsigned k=0) noexcept {
         assert (elements.size() > 0);
         size_t m = elements.size ();
         size_t dim = elements[0].size ();
@@ -146,7 +146,7 @@ namespace posets::downsets {
         }
       }
 
-      vector_or_kdtree_backed (V&& el) {
+      vector_or_kdtree_backed (V&& el, unsigned k=0) {
         // too small, just use a vector
         this->vector = std::make_unique<vector_backed<V>> (std::move (el));
       }

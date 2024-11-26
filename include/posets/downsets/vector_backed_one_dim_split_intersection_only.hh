@@ -17,11 +17,11 @@ namespace posets::downsets {
     public:
       typedef V value_type;
 
-      vector_backed_one_dim_split_intersection_only (V&& v) {
+      vector_backed_one_dim_split_intersection_only (V&& v, unsigned k=0) {
         insert (std::move (v));
       }
 
-      vector_backed_one_dim_split_intersection_only (std::vector<V>&& elements) noexcept {
+      vector_backed_one_dim_split_intersection_only (std::vector<V>&& elements, unsigned k=0) noexcept {
         assert (elements.size() > 0);
         for (auto&& e : elements)
           insert (std::move (e));

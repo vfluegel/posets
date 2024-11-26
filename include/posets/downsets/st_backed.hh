@@ -35,14 +35,14 @@ namespace posets::downsets {
   public:
     st_backed() = delete;
 
-    st_backed (std::vector<V>&& elements) 
+    st_backed (std::vector<V>&& elements, unsigned k=0) 
         : k {}
         , dim {elements.begin().size()} 
     {
         get_sforest().add_vectors(std::move (elements));
     }
 
-    st_backed (V&& v) 
+    st_backed (V&& v, unsigned k=0) 
         : k {}
         , dim {v.size()} 
     {

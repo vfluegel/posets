@@ -33,7 +33,7 @@ private:
   template <Vector V2>
   friend std::ostream &operator<<(std::ostream &os, const utils::sforest<V2> &f);
 
-  int k;
+  unsigned k;
   size_t dim;
 
   struct st_node {

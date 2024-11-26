@@ -17,11 +17,11 @@ namespace posets::downsets {
     public:
       typedef V value_type;
 
-      vector_backed (V&& v) {
+      vector_backed (V&& v, unsigned k=0) {
         insert (std::move (v));
       }
 
-      vector_backed (std::vector<V>&& elements) noexcept {
+      vector_backed (std::vector<V>&& elements, unsigned k=0) noexcept {
         assert (elements.size() > 0);
         for (auto&& e : elements)
           insert (std::move (e));
