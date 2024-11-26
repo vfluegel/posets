@@ -130,6 +130,13 @@ private:
   /*
    Simulation: check if n1 simulates n2
   */
+  // FIXME: This needs to be updated so that: (1) the arguments are indices
+  // instead of the actual nodes, and the layer is the one containing the
+  // nodes and not their children; (2) all early exits are implemented using
+  // branching instead of returns so that we have a single exit point at the
+  // end returning the result (variable) but only after caching it (the cache
+  // should be consulted at the start of the function for short-circuiting of
+  // course).
   bool simulates(st_node &n1, st_node &n2, size_t sonLayer) {
     // If the node is in the last layer, we just check the labels
     if(sonLayer == this->dim + 1) {
