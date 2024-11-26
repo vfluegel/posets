@@ -484,7 +484,7 @@ public:
         size_t c = child;
         auto child_node = layers[lay + 1][children[c]];
         // early exit if the largest child is smaller
-        if (covered[lay + 1] > child_node.label)
+        if (covered[lay] > child_node.label)
           continue;
         
         assert(c < parent.numchild);
