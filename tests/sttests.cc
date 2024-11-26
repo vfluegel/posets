@@ -53,6 +53,21 @@ int main(int argc, char const *argv[]) {
   v = {8, 5, 3};
   assert(not f.covers_vector(idcs2, VType(std::move(v))));
 
+  // One more test so that covers needs to explore branches with shared
+  // prefixes
+  data = {{3, 2, 2}, {3, 4, 1}, {3, 2, 3}, {3, 4, 0}};
+  auto idcs3 = f.add_vectors(std::move(vvtovv(data)));
+  std::cout << f << std::endl;
+  v = {3, 2, 3};
+  assert(f.covers_vector(idcs3, VType(std::move(v))));
+  v = {3, 2, 4};
+  assert(not f.covers_vector(idcs3, VType(std::move(v))));
+  v = {3, 4, 1};
+  assert(f.covers_vector(idcs3, VType(std::move(v))));
+  v = {3, 4, 2};
+  assert(not f.covers_vector(idcs3, VType(std::move(v))));
+
+  // Union and intersection tests
   auto uRoot = f.st_union(idcs, idcs2);
   f.print_children(uRoot, 0);
   std::cout << std::endl;
