@@ -10,6 +10,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+#include <boost/functional/hash.hpp>
 
 #include <posets/concepts.hh>
 
@@ -84,18 +85,19 @@ private:
   // This is a cache/hash-map to get in-layer node identifiers from their
   // signature
   std::vector<std::unordered_map<st_node, size_t, st_hash, st_equal>> inverse;
-  // TODO: We can add a cache for simulation checks too, also per layer, with
-  // keys of type std::pair<size_t, size_t>, bool so that we recall for a
-  // given pair of nodes (in the same layer) whether there is a relation in
-  // the left-to-right direction
+  // Second cache/hash-map to check for a pair of node(-identifiers) in a layer
+  // whether there is a simulation relation in the left-to-right direction
+  std::vector<std::unordered_map<std::pair<size_t, size_t>, bool, boost::hash<std::pair<size_t, size_t>>>> simulating;
 
   void init(int k, size_t dim) {
     this->k = k;
     this->dim = dim;
     layers.resize(dim + 1);
 
-    for (size_t i = 0; i < dim + 1; i++)
+    for (size_t i = 0; i < dim + 1; i++) {
       inverse.emplace_back(INIT_LAYER_SIZE, st_hash(this), st_equal(this));
+      simulating.emplace_back();
+    }
 
     cbuffer_size = INIT_LAYER_SIZE * (k + 1);
     child_buffer = new size_t[cbuffer_size];
@@ -130,46 +132,56 @@ private:
   /*
    Simulation: check if n1 simulates n2
   */
-  // FIXME: This needs to be updated so that: (1) the arguments are indices
-  // instead of the actual nodes, and the layer is the one containing the
-  // nodes and not their children; (2) all early exits are implemented using
-  // branching instead of returns so that we have a single exit point at the
-  // end returning the result (variable) but only after caching it (the cache
-  // should be consulted at the start of the function for short-circuiting of
-  // course).
-  bool simulates(st_node &n1, st_node &n2, size_t sonLayer) {
+  bool simulates(size_t n1, size_t n2, size_t nodeLayer) {
+    // First check if we already computed this and return if we do
+    auto node_pair = std::make_pair(n1, n2);
+    auto cached = simulating[nodeLayer].find(node_pair);
+    if(cached != simulating[nodeLayer].end()) {
+      return cached->second;
+    }
+    bool res = true;
+    st_node& node1 = layers[nodeLayer][n1];
+    st_node& node2 = layers[nodeLayer][n2];
     // If the node is in the last layer, we just check the labels
-    if(sonLayer == this->dim + 1) {
-      return n1.label >= n2.label;
+    if(nodeLayer == this->dim) {
+      res = node1.label >= node2.label;
     }
-    size_t* n1_children = child_buffer + n1.cbuffer_offset;
-    size_t* n2_children = child_buffer + n2.cbuffer_offset;
-    if(n1.label < n2.label || 
-        layers[sonLayer][n1_children[0]].label < layers[sonLayer][n2_children[n2.numchild - 1]].label)
-    {
-      // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
-      // we already know it can't simulate
-      return false;
-    }
-
-    // Check if we can find a corresponding son of n1 for every son of n2
-    for (size_t s2 = 0; s2 < n2.numchild; s2++)
-    {
-      bool found = false;
-      for (size_t s1 = 0; s1 < n1.numchild and
-                          layers[sonLayer][n2_children[s2]].label <=
-                          layers[sonLayer][n1_children[s1]].label; s1++)
+    else {
+      size_t* n1_children = child_buffer + node1.cbuffer_offset;
+      size_t* n2_children = child_buffer + node2.cbuffer_offset;
+      if(node1.label < node2.label || 
+          layers[nodeLayer + 1][n1_children[0]].label < layers[nodeLayer + 1][n2_children[node2.numchild - 1]].label)
       {
-        if(simulates(layers[sonLayer][n1_children[s1]], layers[sonLayer][n2_children[s2]], sonLayer + 1)) {
-          found = true;
-          break;
+        // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
+        // we already know it can't simulate
+        res = false;
+      }
+      else {
+        // Check if we can find a corresponding son of n1 for every son of n2
+        for (size_t s2 = 0; s2 < node2.numchild; s2++)
+        {
+          bool found = false;
+          for (size_t s1 = 0; s1 < node1.numchild and
+                              layers[nodeLayer + 1][n2_children[s2]].label <=
+                              layers[nodeLayer + 1][n1_children[s1]].label; s1++)
+          {
+            if(simulates(n1_children[s1], n2_children[s2], nodeLayer + 1)) {
+              found = true;
+              break;
+            }
+          }
+          // We checked all sons of n1 and there was no match, it can't simulate
+          if(!found) {
+            res = false;
+            break;
+          }
         }
       }
-      // We checked all sons of n1 and there was no match, it can't simulate
-      if(!found) return false;
     }
-
-    return true;
+    
+    // Store the result in the cache and return
+    simulating[nodeLayer][node_pair] = res;
+    return res;
   }
 
   void addSon(st_node &node, size_t sonLayer, size_t son) {
@@ -215,14 +227,18 @@ private:
   }
 
   std::optional<size_t> add_if_not_simulated(st_node &node, size_t destinationLayer, st_node &father) {
+    size_t newID = addNode(node, destinationLayer);
     size_t* siblings = child_buffer + father.cbuffer_offset;
     for(size_t s = 0; s < father.numchild; s++) {
-      if(simulates(layers[destinationLayer][siblings[s]], node, destinationLayer + 1)) {
+      if(simulates(siblings[s], newID, destinationLayer)) {
+        // TODO: Maybe there is a more elegant solution to this?
+        inverse[destinationLayer].erase(node);
+        layers[destinationLayer].pop_back();
         return std::nullopt;
       }
     }
 
-    return addNode(node, destinationLayer);
+    return newID;
   }
 
   size_t node_union(size_t n_s, size_t n_t, size_t destinationLayer) {
@@ -357,7 +373,7 @@ private:
         bool found = false;
         for (size_t s = 0; s < newNode.numchild; s++)
         {
-          if(simulates(layers[currentLayer + 1][currentChildren[s]], layers[currentLayer + 1][newSon], currentLayer + 2)) {
+          if(simulates(currentChildren[s], newSon, currentLayer + 1)) {
             found = true;
             break;
           }
