@@ -81,7 +81,13 @@ private:
   size_t cbuffer_size;
   size_t cbuffer_nxt;
 
+  // This is a cache/hash-map to get in-layer node identifiers from their
+  // signature
   std::vector<std::unordered_map<st_node, size_t, st_hash, st_equal>> inverse;
+  // TODO: We can add a cache for simulation checks too, also per layer, with
+  // keys of type std::pair<size_t, size_t>, bool so that we recall for a
+  // given pair of nodes (in the same layer) whether there is a relation in
+  // the left-to-right direction
 
   void init(int k, size_t dim) {
     this->k = k;
@@ -143,7 +149,9 @@ private:
     for (size_t s2 = 0; s2 < n2.numchild; s2++)
     {
       bool found = false;
-      for (size_t s1 = 0; s1 < n1.numchild; s1++)
+      for (size_t s1 = 0; s1 < n1.numchild and
+                          layers[sonLayer][n2_children[s2]].label <=
+                          layers[sonLayer][n1_children[s1]].label; s1++)
       {
         if(simulates(layers[sonLayer][n1_children[s1]], layers[sonLayer][n2_children[s2]], sonLayer + 1)) {
           found = true;
