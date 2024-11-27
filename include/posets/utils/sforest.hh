@@ -129,6 +129,41 @@ private:
     return std::nullopt;
   }
 
+  bool simulates_node(st_node &n1, st_node &n2, size_t sonLayer) {
+    // If the node is in the last layer, we just check the labels
+    if(sonLayer == this->dim + 1) {
+      return n1.label >= n2.label;
+    }
+    size_t* n1_children = child_buffer + n1.cbuffer_offset;
+    size_t* n2_children = child_buffer + n2.cbuffer_offset;
+    if(n1.label < n2.label || 
+        layers[sonLayer][n1_children[0]].label < layers[sonLayer][n2_children[n2.numchild - 1]].label)
+    {
+      // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
+      // we already know it can't simulate
+      return false;
+    }
+
+    // Check if we can find a corresponding son of n1 for every son of n2
+    for (size_t s2 = 0; s2 < n2.numchild; s2++)
+    {
+      bool found = false;
+      for (size_t s1 = 0; s1 < n1.numchild and
+                          layers[sonLayer][n2_children[s2]].label <=
+                          layers[sonLayer][n1_children[s1]].label; s1++)
+      {
+        if(simulates(n1_children[s1], n2_children[s2], sonLayer)) {
+          found = true;
+          break;
+        }
+      }
+      // We checked all sons of n1 and there was no match, it can't simulate
+      if(!found) return false;
+    }
+
+    return true;
+  }
+
   /*
    Simulation: check if n1 simulates n2
   */
@@ -139,45 +174,11 @@ private:
     if(cached != simulating[nodeLayer].end()) {
       return cached->second;
     }
-    bool res = true;
+    
     st_node& node1 = layers[nodeLayer][n1];
     st_node& node2 = layers[nodeLayer][n2];
     // If the node is in the last layer, we just check the labels
-    if(nodeLayer == this->dim) {
-      res = node1.label >= node2.label;
-    }
-    else {
-      size_t* n1_children = child_buffer + node1.cbuffer_offset;
-      size_t* n2_children = child_buffer + node2.cbuffer_offset;
-      if(node1.label < node2.label || 
-          layers[nodeLayer + 1][n1_children[0]].label < layers[nodeLayer + 1][n2_children[node2.numchild - 1]].label)
-      {
-        // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
-        // we already know it can't simulate
-        res = false;
-      }
-      else {
-        // Check if we can find a corresponding son of n1 for every son of n2
-        for (size_t s2 = 0; s2 < node2.numchild; s2++)
-        {
-          bool found = false;
-          for (size_t s1 = 0; s1 < node1.numchild and
-                              layers[nodeLayer + 1][n2_children[s2]].label <=
-                              layers[nodeLayer + 1][n1_children[s1]].label; s1++)
-          {
-            if(simulates(n1_children[s1], n2_children[s2], nodeLayer + 1)) {
-              found = true;
-              break;
-            }
-          }
-          // We checked all sons of n1 and there was no match, it can't simulate
-          if(!found) {
-            res = false;
-            break;
-          }
-        }
-      }
-    }
+    bool res = simulates_node(node1, node2, nodeLayer + 1);
     
     // Store the result in the cache and return
     simulating[nodeLayer][node_pair] = res;
@@ -227,18 +228,15 @@ private:
   }
 
   std::optional<size_t> add_if_not_simulated(st_node &node, size_t destinationLayer, st_node &father) {
-    size_t newID = addNode(node, destinationLayer);
     size_t* siblings = child_buffer + father.cbuffer_offset;
     for(size_t s = 0; s < father.numchild; s++) {
-      if(simulates(siblings[s], newID, destinationLayer)) {
-        // TODO: Maybe there is a more elegant solution to this?
-        inverse[destinationLayer].erase(node);
-        layers[destinationLayer].pop_back();
+      if(simulates_node(layers[destinationLayer][siblings[s]], node, destinationLayer + 1)) {
         return std::nullopt;
       }
     }
+    // TODO: Could insert false in simualting for all existing children, but would add another loop...
 
-    return newID;
+    return addNode(node, destinationLayer);
   }
 
   size_t node_union(size_t n_s, size_t n_t, size_t destinationLayer) {
