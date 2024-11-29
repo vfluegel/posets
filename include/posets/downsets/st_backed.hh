@@ -43,7 +43,7 @@ namespace posets::downsets {
       if(!st_backed::forest) {
         st_backed::forest = std::make_unique<utils::sforest<V>>(k, elements.begin()->size());
       }
-      get_sforest()->add_vectors(std::move (elements));
+      this->root = get_sforest()->add_vectors(std::move (elements));
     }
 
     st_backed (V&& v, unsigned k=0) 
@@ -51,7 +51,7 @@ namespace posets::downsets {
       if(!st_backed::forest) {
         st_backed::forest = std::make_unique<utils::sforest<V>>(k, v.size());
       }
-      get_sforest()->add_vectors(std::array<V, 1> { std::move (v) });
+      this->root = get_sforest()->add_vectors(std::array<V, 1> { std::move (v) });
     }
 
     bool contains (const V& v) const {

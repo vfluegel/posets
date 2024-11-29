@@ -400,7 +400,12 @@ public:
     std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
 
     if (root) {
-      to_visit.push({1, root.value(), 0});
+      const st_node& rootNode = layers[0][root.value()];
+      size_t *firstChildren = child_buffer + rootNode.cbuffer_offset;
+      for (size_t c = 0; c < rootNode.numchild; c++)
+      {
+        to_visit.push({1, firstChildren[c], 0});
+      }
     } else {
       // Add all roots at dimension 0
       for (size_t i = 0; i < layers[1].size(); i++)
