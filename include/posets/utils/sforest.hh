@@ -475,7 +475,7 @@ public:
    * DFA representation of (bisimulation non-dominated) vectors, it could be
    * exponentially faster than this.
    */
-  bool covers_vector(size_t root, V covered) {
+  bool covers_vector(size_t root, const V &covered) {
     // Stack with tuples (layer, node id, child id)
     std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
 

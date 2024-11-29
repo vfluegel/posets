@@ -4,6 +4,7 @@ header_files = [
   'posets/downsets/full_set.hh',
   'posets/downsets/kdtree_backed.hh',
   'posets/downsets/set_backed.hh',
+  'posets/downsets/st_backed.hh',
   'posets/downsets/vector_backed.hh',
   'posets/downsets/vector_backed_bin.hh',
   'posets/downsets/vector_backed_one_dim_split.hh',

@@ -27,33 +27,35 @@ namespace posets::downsets {
     size_t dim;
 
     size_t root{};
-    static std::unique_ptr<utils::sforest<V>> forest{};
 
   public:
+    typedef V value_type;
+
+    static std::unique_ptr<utils::sforest<V>> forest;
     static utils::sforest<V>* get_sforest() {
-      return forest.get();
+      return st_backed::forest.get();
     }
 
     st_backed() = delete;
 
     st_backed (std::vector<V>&& elements, unsigned k=0) 
     {
-      if(!forest) {
-        forest = std::make_unique<utils::sforest<V>>(k, elements.begin().size());
+      if(!st_backed::forest) {
+        st_backed::forest = std::make_unique<utils::sforest<V>>(k, elements.begin()->size());
       }
       get_sforest()->add_vectors(std::move (elements));
     }
 
     st_backed (V&& v, unsigned k=0) 
     {
-      if(!forest) {
-        forest = std::make_unique<utils::sforest<V>>(k, v.size());
+      if(!st_backed::forest) {
+        st_backed::forest = std::make_unique<utils::sforest<V>>(k, v.size());
       }
       get_sforest()->add_vectors(std::array<V, 1> { std::move (v) });
     }
 
     bool contains (const V& v) const {
-        return get_sforest()->cover_vector(this->root, v);
+        return get_sforest()->covers_vector(this->root, v);
     }
 
     // Union in place
@@ -63,11 +65,26 @@ namespace posets::downsets {
     }
 
     // Intersection in place
-    void intersect_with (const kdtree_backed& other) {
+    void intersect_with (const st_backed& other) {
         size_t newRoot = get_sforest()->st_intersect(this->root, other.root);
         this->root = newRoot;
     }
+
+    template <typename F>
+    auto apply (const F& lambda) const {
+      const auto& all_vectors = get_sforest()->get_all(this->root);
+      std::vector<V> ss;
+      ss.reserve (all_vectors.size ());
+
+      for (const auto& v : all_vectors)
+        ss.push_back (lambda (v));
+
+      return st_backed (std::move (ss));
+    }
   };
+
+template <Vector V>
+std::unique_ptr<utils::sforest<V>> st_backed<V>::forest = nullptr;
 
   template <Vector V>
   inline std::ostream& operator<<(std::ostream& os, const st_backed<V>& f) {

@@ -393,6 +393,7 @@ VECTOR_TYPES (posets::vectors::vector_backed<char>,
               posets::vectors::simd_vector_and_bitset_backed<char>);
 
 using set_types = template_type_list<//posets::downsets::full_set, ; too slow.
+  posets::downsets::st_backed,
   posets::downsets::kdtree_backed,
   posets::downsets::vector_or_kdtree_backed,
   posets::downsets::set_backed,
