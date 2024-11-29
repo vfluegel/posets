@@ -234,8 +234,6 @@ private:
         return std::nullopt;
       }
     }
-    // TODO: Could insert false in simualting for all existing children, but would add another loop...
-
     return addNode(node, destinationLayer);
   }
 
@@ -537,6 +535,34 @@ public:
 
     size_t root_id = build_node(vectorIds, 0, elementVec);
     return root_id;
+  }
+
+  /*
+    For testing: Check that all children are ordered descending
+  */
+  bool check_child_order() {
+    size_t layer_num = 0;
+    for(auto& l : layers) {
+      for(st_node& n: l) {
+        size_t* children = child_buffer + n.cbuffer_offset;
+        for (size_t i = 1; i < n.numchild; i++)
+        {
+          // There is a child with a larger label than the previous child
+          if(layers[layer_num + 1][children[i]].label > layers[layer_num + 1][children[i - 1]].label) {
+            return false;
+          }
+        }
+      }
+      layer_num++;
+    }
+    return true;
+  }
+
+  /*
+    For testing: Check that one root simulates another
+  */
+  bool check_simulation(size_t n1, size_t n2) {
+    return simulates(n1, n2, 0);
   }
 };
 

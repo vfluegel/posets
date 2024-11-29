@@ -31,7 +31,7 @@ int main(int argc, char const *argv[]) {
   assert(not f.covers_vector(idcs, VType(std::move(v))));
 
   // Test adding a second tree to the forest
-  data = {{7, 5, 3}, {4, 8, 4}, {2, 5, 6}};
+  data = {{7, 4, 3}, {4, 8, 4}, {2, 5, 6}};
   auto idcs2 = f.add_vectors(std::move(vvtovv(data)));
   std::cout << f << std::endl;
 
@@ -67,14 +67,39 @@ int main(int argc, char const *argv[]) {
   v = {3, 4, 2};
   assert(not f.covers_vector(idcs3, VType(std::move(v))));
 
-  // Union and intersection tests
-  auto uRoot = f.st_union(idcs, idcs2);
-  f.print_children(uRoot, 0);
-  std::cout << std::endl;
+  // Test that all children are ordered descending
+  assert(f.check_child_order());
 
+  // Test that the root of a (single-vector) ST is simulated by the
+  // root of the original ST
+  data = {{3, 4, 1}};
+  auto idcs4 = f.add_vectors(std::move(vvtovv(data)));
+  assert(f.check_simulation(idcs, idcs4));
+
+  // Test that the root of a second (single-vector) ST is not simulated
+  // by the root of the original ST
+  data = {{4, 9, 9}};
+  auto idcs5 = f.add_vectors(std::move(vvtovv(data)));
+  assert(not f.check_simulation(idcs, idcs5));
+
+  // Union tests: Check for vectors that are only in one ST
+  // and a vector that is in none
+  auto uRoot = f.st_union(idcs, idcs2);
+  v = {7, 4, 1};
+  assert(f.covers_vector(uRoot, VType(std::move(v))));
+  v = {5, 5, 3};
+  assert(f.covers_vector(uRoot, VType(std::move(v))));
+  v = {8, 3, 1};
+  assert(not f.covers_vector(uRoot, VType(std::move(v))));
+
+  // Intersection test: Exact opposite of union
   auto iRoot = f.st_intersect(idcs, idcs2);
-  f.print_children(iRoot, 0);
-  std::cout << std::endl;
+  v = {7, 4, 1};
+  assert(not f.covers_vector(iRoot, VType(std::move(v))));
+  v = {5, 5, 3};
+  assert(not f.covers_vector(iRoot, VType(std::move(v))));
+  v = {3, 5, 4};
+  assert(f.covers_vector(iRoot, VType(std::move(v))));
 
   return 0;
 }
