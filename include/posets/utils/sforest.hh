@@ -118,7 +118,7 @@ private:
       int midVal = layers[childLayer][children[mid]].label;
 
       if (midVal == val) {
-        return children[mid];
+        return mid;
       } else if (midVal > val) {
         left = mid + 1;
       } else {
@@ -310,7 +310,16 @@ private:
           auto intersectRes = node_intersect(node_s_children[s_s], node_t_children[s_t],
                                 destinationLayer + 1, newNode);
           if(intersectRes.has_value()) {
-            addSon(newNode, destinationLayer + 1, intersectRes.value());
+            // Can happen that we insert the same value twice, so we need to check
+            auto existingSon = hasSon(newNode, destinationLayer + 1, layers[destinationLayer + 1][intersectRes.value()].label);
+            if(existingSon.has_value()) {
+              size_t newSon = node_union(existingSon.value(), intersectRes.value(), destinationLayer + 1);
+              size_t* newNode_children = child_buffer + newNode.cbuffer_offset;
+              newNode_children[existingSon.value()] = newSon;
+            }
+            else {
+              addSon(newNode, destinationLayer + 1, intersectRes.value());
+            }
           }
         }
       }
@@ -452,15 +461,12 @@ public:
     assert(layer <= this->dim);
     st_node& node = layers[layer][n];
     size_t* children = child_buffer + node.cbuffer_offset;
-    std::cout << layer << "." << n << " [" << node.label << "] -> ( ";
+    std::cout << std::string(layer, '\t') << layer << "." << n << " [" << node.label << "] -> (" << (layer == this->dim? "" : "\n");
     for (size_t i = 0; i < node.numchild; i++)
     {
       print_children(children[i], layer + 1);
-      if(i < node.numchild -1) {
-        std::cout << ", ";
-      }
     }
-    std::cout << " ) ";
+    std::cout << (layer == this->dim? " " : std::string(layer, '\t')) << " )\n";
   }
 
   size_t st_union(size_t root1, size_t root2) {
