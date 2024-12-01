@@ -12,7 +12,6 @@ header_files = [
   'posets/downsets/vector_or_kdtree_backed.hh',
   'posets/downsets.hh',
   'posets/utils/kdtree.hh',
-  'posets/utils/sharingtree.hh',
   'posets/utils/sforest.hh',
   'posets/utils/ref_ptr_cmp.hh',
   'posets/utils/simd_traits.hh',
