@@ -44,8 +44,12 @@ struct test_t : public generic_test<void> {
           set.insert (std::move (v[i]));
         return set;
       }
-      else
-        return SetType (std::move (v), 2);
+      else {
+        if constexpr (BoundedDownset<T>)
+          return SetType (std::move (v), 2);
+        else
+          return SetType (std::move (v));
+      }
     }
 
     void operator() () {

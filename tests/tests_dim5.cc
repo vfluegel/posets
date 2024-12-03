@@ -10,6 +10,7 @@
 
 #include "test_maker.hh"
 
+#include <posets/concepts.hh>
 #include <posets/downsets.hh>
 #include <posets/vectors.hh>
 
@@ -44,8 +45,12 @@ struct test_t : public generic_test<void> {
           set.insert (std::move (v[i]));
         return set;
       }
-      else
-        return SetType (std::move (v), 12);
+      else {
+        if constexpr (BoundedDownset<T>)
+          return SetType (std::move (v), 12);
+        else
+          return SetType (std::move (v));
+      }
     }
 
     void operator() () {

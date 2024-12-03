@@ -38,7 +38,7 @@ namespace posets::downsets {
 
     sharingtree_backed() = delete;
 
-    sharingtree_backed (std::vector<V>&& elements, unsigned k=0) 
+    sharingtree_backed (std::vector<V>&& elements, typename V::value_type k) 
     {
       if(!sharingtree_backed::forest) {
         sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(k, elements.begin()->size());
@@ -46,7 +46,7 @@ namespace posets::downsets {
       this->root = sharingforest()->add_vectors(std::move (elements));
     }
 
-    sharingtree_backed (V&& v, unsigned k=0) 
+    sharingtree_backed (V&& v, typename V::value_type k) 
     {
       if(!sharingtree_backed::forest) {
         sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(k, v.size());

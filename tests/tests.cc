@@ -44,8 +44,12 @@ struct test_t : public generic_test<void> {
           set.insert (std::move (v[i]));
         return set;
       }
-      else
-        return SetType (std::move (v));
+      else {
+        if constexpr (BoundedDownset<T>)
+          return SetType (std::move (v));
+        else
+          return SetType (std::move (v), 11);
+      }
     }
 
     void operator() () {
@@ -58,7 +62,11 @@ struct test_t : public generic_test<void> {
       std::cout << "Singleton checks" << std::endl;
       assert(v1.size () > 0);
 
-      SetType set_one_elt (v1.copy (), 11);
+
+      if constexpr (BoundedDownset<SetType>)
+        SetType set_one_elt (v1.copy (), 11);
+      else
+        SetType set_one_elt (v1.copy ());
       assert (set_one_elt.contains (v1));
       assert (set_one_elt.contains (v4));
       assert (not set_one_elt.contains (v2));
@@ -137,7 +145,11 @@ struct test_t : public generic_test<void> {
 
       // appply test
       std::cout << "Apply test" << std::endl;
-      SetType set_one_elt_cpy2 (v1.copy ());
+
+      if constexpr (BoundedDownset<SetType>)
+        SetType set_one_elt_cpy2 (v1.copy (), 11);
+      else
+        SetType set_one_elt_cpy2 (v1.copy ());
       set_one_elt.intersect_with (std::move (set_one_elt_cpy2));
       set_one_elt = set_one_elt.apply ([] (const VType& v) { return v.copy (); });
       assert (set_one_elt.contains (v1));

@@ -26,4 +26,6 @@ namespace posets::downsets {
   static_assert (Downset<vector_backed_one_dim_split<posets::vectors::vector_backed<int>>>);
   static_assert (Downset<vector_backed_one_dim_split_intersection_only<posets::vectors::vector_backed<int>>>);
   static_assert (Downset<set_backed<posets::vectors::vector_backed<int>>>);
+
+  static_assert (BoundedDownset<sharingtree_backed<posets::vectors::vector_backed<int>>>);
 }
