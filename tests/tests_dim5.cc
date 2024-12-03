@@ -45,7 +45,7 @@ struct test_t : public generic_test<void> {
         return set;
       }
       else
-        return SetType (std::move (v), 10);
+        return SetType (std::move (v), 12);
     }
 
     void operator() () {
@@ -84,6 +84,14 @@ struct test_t : public generic_test<void> {
 
       std::cout << "Preparing to intersect" << std::endl;
       F.intersect_with (std::move (F1i));
+
+      assert (F.contains (VType (il {8, 0, 9 ,9, 4})));
+      assert (F.contains (VType (il {8, 0, 9 ,9, 5})));
+      assert (not F.contains (VType (il {8, 0, 9 ,9, 6})));
+      assert (F.contains (VType (il {7, 0, 9 ,9, 7})));
+      assert (not F.contains (VType (il {7, 0, 9 ,9, 8})));
+      assert (F.contains (VType (il {9, 0, 7 ,7, 9})));
+      assert (not F.contains (VType (il {9, 0, 7 ,7, 10})));
       
     }
 
