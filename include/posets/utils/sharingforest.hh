@@ -24,15 +24,15 @@ namespace posets::utils {
 size_t INIT_LAYER_SIZE = 100;
 
 // Forward definition for the operator<<
-template <Vector> class sforest;
+template <Vector> class sharingforest;
 
 template <Vector V>
-std::ostream &operator<<(std::ostream &os, const utils::sforest<V> &f);
+std::ostream &operator<<(std::ostream &os, const utils::sharingforest<V> &f);
 
-template <Vector V> class sforest {
+template <Vector V> class sharingforest {
 private:
   template <Vector V2>
-  friend std::ostream &operator<<(std::ostream &os, const utils::sforest<V2> &f);
+  friend std::ostream &operator<<(std::ostream &os, const utils::sharingforest<V2> &f);
 
   unsigned k;
   size_t dim;
@@ -49,8 +49,8 @@ private:
   // equivalence operations to be able to access the unique table. Hence, we
   // keep a reference to the table in them.
   struct st_hash {
-    sforest *f;
-    st_hash(sforest *that) : f{that} {}
+    sharingforest *f;
+    st_hash(sharingforest *that) : f{that} {}
 
     size_t operator()(const st_node &k) const {
       size_t res = std::hash<int>()(k.label);
@@ -62,8 +62,8 @@ private:
   };
 
   struct st_equal {
-    sforest *f;
-    st_equal(sforest *that) : f{that} {}
+    sharingforest *f;
+    st_equal(sharingforest *that) : f{that} {}
 
     bool operator()(const st_node &lhs, const st_node &rhs) const {
       if (lhs.label != rhs.label or lhs.numchild != rhs.numchild)
@@ -390,14 +390,14 @@ private:
   }
 
 public:
-  sforest() {}
+  sharingforest() {}
 
-  sforest(int k, size_t dim) {
+  sharingforest(int k, size_t dim) {
     assert(dim >= 2);
     this->init(k, dim);
   }
 
-  ~sforest() {
+  ~sharingforest() {
     if (layers.empty())
       return;
 
@@ -578,7 +578,7 @@ public:
 };
 
 template <Vector V>
-inline std::ostream &operator<<(std::ostream &os, const sforest<V> &f) {
+inline std::ostream &operator<<(std::ostream &os, const sharingforest<V> &f) {
   for (auto &&el : f.get_all())
     os << el << std::endl;
 

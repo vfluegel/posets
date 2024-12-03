@@ -1,6 +1,6 @@
 #include <vector>
 
-#include <posets/utils/sforest.hh>
+#include <posets/utils/sharingforest.hh>
 #include <posets/vectors.hh>
 
 namespace utils = posets::utils;
@@ -15,7 +15,7 @@ std::vector<VType> vvtovv(const std::vector<std::vector<char>> &vv) {
 }
 
 int main(int argc, char const *argv[]) {
-  utils::sforest<VType> f{10, 3};
+  utils::sharingforest<VType> f{10, 3};
 
   // Add some vectors to create a tree
   std::vector<std::vector<char>> data{{6, 3, 2}, {5, 5, 4}, {2, 6, 2}};
