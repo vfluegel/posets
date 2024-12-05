@@ -38,7 +38,7 @@ private:
   size_t dim;
 
   struct st_node {
-    int label;
+    typename V::value_type label;
     size_t numchild;
     size_t cbuffer_offset;
   };
@@ -53,7 +53,7 @@ private:
     st_hash(sharingforest *that) : f{that} {}
 
     size_t operator()(const st_node &k) const {
-      size_t res = std::hash<int>()(k.label);
+      size_t res = std::hash<typename V::value_type>()(k.label);
       size_t *children = f->child_buffer + k.cbuffer_offset;
       for (size_t i = 0; i < k.numchild; i++)
         res ^= std::hash<size_t>()(children[i]) << (i + 1);
@@ -114,7 +114,7 @@ private:
     while (left <= right) {
       size_t mid = left + (right - left) / 2;
       assert(mid < node.numchild);
-      int midVal = layers[childLayer][children[mid]].label;
+      typename V::value_type midVal = layers[childLayer][children[mid]].label;
 
       if (midVal == val) {
         return mid;
@@ -354,9 +354,9 @@ private:
     // If currentLayer is 0, we set the label to the dummy value -1 for the root
     // Else all nodes should have the same value at index currentLayer - 1, so
     // we just use the first
-    int label{currentLayer == 0
-                  ? -1
-                  : static_cast<int>(elementVec[vecs[0]][currentLayer - 1])};
+    typename V::value_type label{currentLayer == 0
+                  ? static_cast<typename V::value_type>(-1)
+                  : elementVec[vecs[0]][currentLayer - 1]};
     st_node newNode{label, 0};
     // We have not reached the last layer - so add children
     if (currentLayer < this->dim) {
