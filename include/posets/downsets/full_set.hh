@@ -22,11 +22,11 @@ namespace posets::downsets {
       full_set (full_set&&) = default;
       full_set& operator= (full_set&&) = default;
 
-      full_set (V&& v, unsigned k=0) {
+      full_set (V&& v) {
         insert (std::move (v));
       }
 
-      full_set (std::vector<V>&& elements, unsigned k=0) noexcept {
+      full_set (std::vector<V>&& elements) noexcept {
         assert (elements.size() > 0);
         for (auto&& e : elements)
           insert (std::move (e));

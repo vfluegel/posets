@@ -45,7 +45,7 @@ struct test_t : public generic_test<void> {
         return set;
       }
       else
-        return SetType (std::move (v), 12);
+        return SetType (std::move (v));
     }
 
     void operator() () {

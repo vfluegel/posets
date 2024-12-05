@@ -22,6 +22,7 @@ namespace posets::utils {
 // When the buffer is full, we double its capacity and copy everything to the
 // new block of reserved memory.
 size_t INIT_LAYER_SIZE = 100;
+unsigned INIT_MAX_CHILDREN = 10;
 
 // Forward definition for the operator<<
 template <Vector> class sharingforest;
@@ -34,7 +35,6 @@ private:
   template <Vector V2>
   friend std::ostream &operator<<(std::ostream &os, const utils::sharingforest<V2> &f);
 
-  unsigned k;
   size_t dim;
 
   struct st_node {
@@ -89,8 +89,7 @@ private:
   // whether there is a simulation relation in the left-to-right direction
   std::vector<std::unordered_map<std::pair<size_t, size_t>, bool, boost::hash<std::pair<size_t, size_t>>>> simulating;
 
-  void init(int k, size_t dim) {
-    this->k = k;
+  void init(size_t dim) {
     this->dim = dim;
     layers.resize(dim + 1);
 
@@ -99,7 +98,7 @@ private:
       simulating.emplace_back();
     }
 
-    cbuffer_size = INIT_LAYER_SIZE * (k + 1);
+    cbuffer_size = INIT_LAYER_SIZE * INIT_MAX_CHILDREN;
     child_buffer = new size_t[cbuffer_size];
     cbuffer_nxt = 0;
   }
@@ -392,9 +391,9 @@ private:
 public:
   sharingforest() {}
 
-  sharingforest(int k, size_t dim) {
+  sharingforest(size_t dim) {
     assert(dim >= 2);
-    this->init(k, dim);
+    this->init(dim);
   }
 
   ~sharingforest() {

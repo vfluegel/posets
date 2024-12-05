@@ -28,8 +28,8 @@ namespace posets {
     not std::is_default_constructible_v<T> and
     // NOTE: Constructors take a vector, or vector of vectors, and a bound on
     // the infinity-norm
-    std::is_constructible_v<T, V&&, unsigned> and
-    std::is_constructible_v<T, std::vector<V>&&, unsigned> and
+    std::is_constructible_v<T, V&&> and
+    std::is_constructible_v<T, std::vector<V>&&> and
     not std::is_copy_constructible_v<T> and
     not std::is_copy_assignable_v<T> and
     std::is_move_constructible_v<T> and
