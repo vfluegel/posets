@@ -370,11 +370,11 @@ private:
       }
       newNode.cbuffer_offset = addChildren(newPartition.size());
 
-      size_t* currentChildren = child_buffer + newNode.cbuffer_offset;
       for (auto &[n, children] : newPartition) {
         // Build a new son for each individual value at currentLayer + 1
         size_t newSon = build_node(children, currentLayer + 1, elementVec);
         bool found = false;
+        size_t* currentChildren = child_buffer + newNode.cbuffer_offset;
         for (size_t s = 0; s < newNode.numchild; s++)
         {
           if(simulates(currentChildren[s], newSon, currentLayer + 1)) {
