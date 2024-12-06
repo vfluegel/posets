@@ -24,6 +24,7 @@ namespace posets::downsets {
     friend std::ostream& operator<<(std::ostream& os, const sharingtree_backed<V2>& f);
 
     size_t dim;
+    std::vector<V> vector_set;
 
     size_t root{};
 
@@ -36,6 +37,10 @@ namespace posets::downsets {
     }
 
     sharingtree_backed() = delete;
+    sharingtree_backed (const sharingtree_backed&) = delete;
+    sharingtree_backed (sharingtree_backed&&) = default;
+    sharingtree_backed& operator= (const sharingtree_backed&) = delete;
+    sharingtree_backed& operator= (sharingtree_backed&&) = default;
 
     sharingtree_backed (std::vector<V>&& elements) 
     {
@@ -43,6 +48,7 @@ namespace posets::downsets {
         sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(elements.begin()->size());
       }
       this->root = sharingforest()->add_vectors(std::move (elements));
+      this->vector_set = sharingforest()->get_all(this->root);
     }
 
     sharingtree_backed (V&& v) 
@@ -51,11 +57,16 @@ namespace posets::downsets {
         sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(v.size());
       }
       this->root = sharingforest()->add_vectors(std::array<V, 1> { std::move (v) });
+      this->vector_set = sharingforest()->get_all(this->root);
     }
 
     auto size () const {
-      return sharingforest()->get_all(this->root).size();
+      return this->vector_set.size();
     }
+    auto        begin ()       { return this->vector_set.begin (); }
+    const auto  begin () const { return this->vector_set.begin (); }
+    auto        end ()         { return this->vector_set.end (); }
+    const auto  end () const   { return this->vector_set.end (); }
 
     bool contains (const V& v) const {
         return sharingforest()->covers_vector(this->root, v);
@@ -75,11 +86,10 @@ namespace posets::downsets {
 
     template <typename F>
     auto apply (const F& lambda) const {
-      const auto& all_vectors = sharingforest()->get_all(this->root);
       std::vector<V> ss;
-      ss.reserve (all_vectors.size ());
+      ss.reserve (this->vector_set.size ());
 
-      for (const auto& v : all_vectors)
+      for (const auto& v : this->vector_set)
         ss.push_back (lambda (v));
 
       return sharingtree_backed (std::move (ss));
