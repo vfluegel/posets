@@ -23,7 +23,6 @@ namespace posets::downsets {
     template <Vector V2>
     friend std::ostream& operator<<(std::ostream& os, const sharingtree_backed<V2>& f);
 
-    int k;
     size_t dim;
 
     size_t root{};
@@ -38,20 +37,24 @@ namespace posets::downsets {
 
     sharingtree_backed() = delete;
 
-    sharingtree_backed (std::vector<V>&& elements, typename V::value_type k) 
+    sharingtree_backed (std::vector<V>&& elements) 
     {
       if(!sharingtree_backed::forest) {
-        sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(k, elements.begin()->size());
+        sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(elements.begin()->size());
       }
       this->root = sharingforest()->add_vectors(std::move (elements));
     }
 
-    sharingtree_backed (V&& v, typename V::value_type k) 
+    sharingtree_backed (V&& v) 
     {
       if(!sharingtree_backed::forest) {
-        sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(k, v.size());
+        sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(v.size());
       }
       this->root = sharingforest()->add_vectors(std::array<V, 1> { std::move (v) });
+    }
+
+    auto size () const {
+      return sharingforest()->get_all(this->root).size();
     }
 
     bool contains (const V& v) const {

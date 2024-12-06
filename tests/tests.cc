@@ -62,11 +62,7 @@ struct test_t : public generic_test<void> {
       std::cout << "Singleton checks" << std::endl;
       assert(v1.size () > 0);
 
-
-      if constexpr (BoundedDownset<SetType>)
-        SetType set_one_elt (v1.copy (), 11);
-      else
-        SetType set_one_elt (v1.copy ());
+      SetType set_one_elt (v1.copy ());
       assert (set_one_elt.contains (v1));
       assert (set_one_elt.contains (v4));
       assert (not set_one_elt.contains (v2));
@@ -124,7 +120,7 @@ struct test_t : public generic_test<void> {
         e1.emplace_back (VType (il {-1, 0}));
         e1.emplace_back (VType (il {0, -1}));
 
-        SetType set = vec_to_set (std::move (e1));
+        vec_to_set (std::move (e1));
       }
       
       // simple intersect

@@ -44,12 +44,8 @@ struct test_t : public generic_test<void> {
           set.insert (std::move (v[i]));
         return set;
       }
-      else {
-        if constexpr (BoundedDownset<T>)
-          return SetType (std::move (v), 2);
-        else
-          return SetType (std::move (v));
-      }
+      else
+        return SetType (std::move (v));
     }
 
     void operator() () {
@@ -64,7 +60,7 @@ struct test_t : public generic_test<void> {
         e1.emplace_back (VType (il {-1, 0}));
         e1.emplace_back (VType (il {0, -1}));
 
-        SetType set = vec_to_set (std::move (e1));
+        vec_to_set (std::move (e1));
       }
       std::cout << "Create set" << std::endl;
       {
@@ -76,7 +72,7 @@ struct test_t : public generic_test<void> {
         e1.emplace_back (VType (il {-1, 0}));
         e1.emplace_back (VType (il {0, -1}));
 
-        SetType set = vec_to_set (std::move (e1));
+        vec_to_set (std::move (e1));
       }
       std::cout << "Create set" << std::endl;
       {
@@ -89,7 +85,7 @@ struct test_t : public generic_test<void> {
         e1.emplace_back (VType (il {-1, 0}));
         e1.emplace_back (VType (il {0, -1}));
 
-        SetType set = vec_to_set (std::move (e1));
+        vec_to_set (std::move (e1));
       }
       std::cout << "Create set" << std::endl;
       {
@@ -103,7 +99,7 @@ struct test_t : public generic_test<void> {
         e1.emplace_back (VType (il {-1, 0}));
         e1.emplace_back (VType (il {-1, 0}));
 
-        SetType set = vec_to_set (std::move (e1));
+        vec_to_set (std::move (e1));
       }
 
       std::cout << "Create set loop" << std::endl;
@@ -114,7 +110,7 @@ struct test_t : public generic_test<void> {
           for (int j = 0; j < i; ++j)
             e1.emplace_back (VType (il {-1, 0}));
           e1.emplace_back (VType (il {0, -1}));
-          SetType set = vec_to_set (std::move (e1));
+          vec_to_set (std::move (e1));
         }
       }
 
@@ -131,7 +127,7 @@ struct test_t : public generic_test<void> {
         e1.emplace_back (VType (il {-1, 0}));
         e1.emplace_back (VType (il {0, -1}));
 
-        SetType set = vec_to_set (std::move (e1));
+        vec_to_set (std::move (e1));
       }
 
     }

@@ -22,6 +22,7 @@ namespace posets::utils {
 // When the buffer is full, we double its capacity and copy everything to the
 // new block of reserved memory.
 size_t INIT_LAYER_SIZE = 100;
+unsigned INIT_MAX_CHILDREN = 10;
 
 // Forward definition for the operator<<
 template <Vector> class sharingforest;
@@ -34,11 +35,10 @@ private:
   template <Vector V2>
   friend std::ostream &operator<<(std::ostream &os, const utils::sharingforest<V2> &f);
 
-  unsigned k;
   size_t dim;
 
   struct st_node {
-    int label;
+    typename V::value_type label;
     size_t numchild;
     size_t cbuffer_offset;
   };
@@ -53,7 +53,7 @@ private:
     st_hash(sharingforest *that) : f{that} {}
 
     size_t operator()(const st_node &k) const {
-      size_t res = std::hash<int>()(k.label);
+      size_t res = std::hash<typename V::value_type>()(k.label);
       size_t *children = f->child_buffer + k.cbuffer_offset;
       for (size_t i = 0; i < k.numchild; i++)
         res ^= std::hash<size_t>()(children[i]) << (i + 1);
@@ -89,8 +89,7 @@ private:
   // whether there is a simulation relation in the left-to-right direction
   std::vector<std::unordered_map<std::pair<size_t, size_t>, bool, boost::hash<std::pair<size_t, size_t>>>> simulating;
 
-  void init(int k, size_t dim) {
-    this->k = k;
+  void init(size_t dim) {
     this->dim = dim;
     layers.resize(dim + 1);
 
@@ -99,7 +98,7 @@ private:
       simulating.emplace_back();
     }
 
-    cbuffer_size = INIT_LAYER_SIZE * (k + 1);
+    cbuffer_size = INIT_LAYER_SIZE * INIT_MAX_CHILDREN;
     child_buffer = new size_t[cbuffer_size];
     cbuffer_nxt = 0;
   }
@@ -115,7 +114,7 @@ private:
     while (left <= right) {
       size_t mid = left + (right - left) / 2;
       assert(mid < node.numchild);
-      int midVal = layers[childLayer][children[mid]].label;
+      typename V::value_type midVal = layers[childLayer][children[mid]].label;
 
       if (midVal == val) {
         return mid;
@@ -355,9 +354,9 @@ private:
     // If currentLayer is 0, we set the label to the dummy value -1 for the root
     // Else all nodes should have the same value at index currentLayer - 1, so
     // we just use the first
-    int label{currentLayer == 0
-                  ? -1
-                  : static_cast<int>(elementVec[vecs[0]][currentLayer - 1])};
+    typename V::value_type label{currentLayer == 0
+                  ? static_cast<typename V::value_type>(-1)
+                  : elementVec[vecs[0]][currentLayer - 1]};
     st_node newNode{label, 0};
     // We have not reached the last layer - so add children
     if (currentLayer < this->dim) {
@@ -371,11 +370,11 @@ private:
       }
       newNode.cbuffer_offset = addChildren(newPartition.size());
 
-      size_t* currentChildren = child_buffer + newNode.cbuffer_offset;
       for (auto &[n, children] : newPartition) {
         // Build a new son for each individual value at currentLayer + 1
         size_t newSon = build_node(children, currentLayer + 1, elementVec);
         bool found = false;
+        size_t* currentChildren = child_buffer + newNode.cbuffer_offset;
         for (size_t s = 0; s < newNode.numchild; s++)
         {
           if(simulates(currentChildren[s], newSon, currentLayer + 1)) {
@@ -392,9 +391,9 @@ private:
 public:
   sharingforest() {}
 
-  sharingforest(int k, size_t dim) {
+  sharingforest(size_t dim) {
     assert(dim >= 2);
-    this->init(k, dim);
+    this->init(dim);
   }
 
   ~sharingforest() {

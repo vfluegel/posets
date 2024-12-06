@@ -277,6 +277,7 @@ VECTOR_TYPES (
   posets::vectors::simd_vector_backed<test_value_type>);
 
 using set_types = template_type_list<
+  posets::downsets::sharingtree_backed,
   posets::downsets::kdtree_backed,
   posets::downsets::vector_or_kdtree_backed,
   posets::downsets::vector_backed,
