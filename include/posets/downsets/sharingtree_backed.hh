@@ -11,26 +11,17 @@
 #include <posets/utils/sharingforest.hh>
 
 namespace posets::downsets {
-  // Forward definition for the operator<<s.
-  template <Vector>
-  class sharingtree_backed;
-
-  template <Vector V>
-  std::ostream& operator<<(std::ostream& os, const sharingtree_backed<V>& f);
-
+  
   template <Vector V> class sharingtree_backed {
   private:
-    template <Vector V2>
-    friend std::ostream& operator<<(std::ostream& os, const sharingtree_backed<V2>& f);
-
     size_t dim;
-    std::vector<V> vector_set;
 
     size_t root{};
 
   public:
     typedef V value_type;
-
+    
+    std::vector<V> vector_set;
     static std::unique_ptr<utils::sharingforest<V>> forest;
     static utils::sharingforest<V>* sharingforest() {
       return sharingtree_backed::forest.get();
@@ -76,12 +67,14 @@ namespace posets::downsets {
     void union_with (sharingtree_backed&& other) {
         size_t newRoot = sharingforest()->st_union(this->root, other.root);
         this->root = newRoot;
+        this->vector_set = sharingforest()->get_all(this->root);
     }
 
     // Intersection in place
     void intersect_with (const sharingtree_backed& other) {
         size_t newRoot = sharingforest()->st_intersect(this->root, other.root);
         this->root = newRoot;
+        this->vector_set = sharingforest()->get_all(this->root);
     }
 
     template <typename F>
@@ -101,8 +94,8 @@ std::unique_ptr<utils::sharingforest<V>> sharingtree_backed<V>::forest = nullptr
 
   template <Vector V>
   inline std::ostream& operator<<(std::ostream& os, const sharingtree_backed<V>& f) {
-    f.sharingforest()->print_children(f.root, 0);
-    os << std::endl;
+    for (auto &&el : f.vector_set)
+      os << el << std::endl;
     return os;
   }
 }
