@@ -16,12 +16,6 @@
 size_t posets::vectors::bool_threshold = 128;
 size_t posets::vectors::bitset_threshold = 128;
 
-template<class T, class = void>
-struct has_insert : std::false_type {};
-
-template <class T>
-struct has_insert<T, std::void_t<decltype(std::declval<T>().insert (std::declval<typename T::value_type> ()))>> : std::true_type {};
-
 #define il std::initializer_list<char>
 
 template<typename SetType>
@@ -38,15 +32,7 @@ struct test_t : public generic_test<void> {
     }
 
     SetType vec_to_set (std::vector<VType>&& v) {
-      if constexpr (has_insert<SetType>::value) {
-        SetType set (std::move (v[0]));
-        for (size_t i = 1; i < v.size (); ++i)
-          set.insert (std::move (v[i]));
-        return set;
-      }
-      else {
-        return SetType (std::move (v), 11);
-      }
+      return SetType (std::move (v));
     }
 
     void operator() () {
