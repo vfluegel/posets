@@ -45,10 +45,7 @@ struct test_t : public generic_test<void> {
         return set;
       }
       else {
-        if constexpr (BoundedDownset<T>)
-          return SetType (std::move (v));
-        else
-          return SetType (std::move (v), 11);
+        return SetType (std::move (v), 11);
       }
     }
 
@@ -142,10 +139,7 @@ struct test_t : public generic_test<void> {
       // appply test
       std::cout << "Apply test" << std::endl;
 
-      if constexpr (BoundedDownset<SetType>)
-        SetType set_one_elt_cpy2 (v1.copy (), 11);
-      else
-        SetType set_one_elt_cpy2 (v1.copy ());
+      SetType set_one_elt_cpy2 (v1.copy ());
       set_one_elt.intersect_with (std::move (set_one_elt_cpy2));
       set_one_elt = set_one_elt.apply ([] (const VType& v) { return v.copy (); });
       assert (set_one_elt.contains (v1));
