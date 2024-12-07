@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <posets/concepts.hh>
+#include <posets/vectors/traits.hh>
 
 namespace posets::downsets {
   template <Vector V>
