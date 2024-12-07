@@ -2,15 +2,15 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <map>
-#include <ranges>
 #include <memory>
 #include <numeric>
+#include <ranges>
 #include <stack>
 #include <vector>
-#include <cmath>
 
 #include <posets/concepts.hh>
 
@@ -36,13 +36,13 @@ namespace posets::utils {
       using kdtree_node_ptr = kdtree_node*;
 
       struct kdtree_node {
-          std::optional<size_t> value_idx;      // only for leaves: the index of
-                                                // the element from the list
-          int location;                         // the value at which we split
-          size_t axis;                          // the dimension at which we
-                                                // split
-          bool clean_split;                     // whether the split is s.t.
-                                                // to the left all is smaller
+          std::optional<size_t> value_idx;  // only for leaves: the index of
+                                            // the element from the list
+          int location;                     // the value at which we split
+          size_t axis;                      // the dimension at which we
+                                            // split
+          bool clean_split;                 // whether the split is s.t.
+                                            // to the left all is smaller
       };
 
       size_t dim;
@@ -58,14 +58,14 @@ namespace posets::utils {
        * NOTE: This assumes that this->tree has been allocated enough memory to
        * hold the whole (balanced) tree
        */
-      void
-      recursive_build (size_t result,  // where to leave the new tree
-                       const std::vector<size_t>::iterator& begin_it,
-                       const std::vector<size_t>::iterator& end_it,
-                       size_t length, size_t axis) {
+      void recursive_build (size_t result,  // where to leave the new tree
+                            const std::vector<size_t>::iterator& begin_it,
+                            const std::vector<size_t>::iterator& end_it, size_t length,
+                            size_t axis) {
         // sanity checks
         assert (this->tree != nullptr);
-        assert (static_cast<size_t> (4 << (int)(std::floor (std::log2 (this->vector_set.size ())))) > result);
+        assert (static_cast<size_t> (
+                    4 << (int) (std::floor (std::log2 (this->vector_set.size ())))) > result);
         assert (static_cast<size_t> (std::distance (begin_it, end_it)) == length);
         assert (length > 0);
         assert (axis < this->dim);
@@ -79,31 +79,28 @@ namespace posets::utils {
         // Use a selection algorithm to get the median
         // NOTE: we actually get the item whose index is
         auto median_it = begin_it + length / 2;
-        std::nth_element (begin_it, median_it, end_it,
-          [this, &axis] (size_t i1, size_t i2) {
-            return this->vector_set[i1][axis] <
-                   this->vector_set[i2][axis];
-          });
+        std::nth_element (begin_it, median_it, end_it, [this, &axis] (size_t i1, size_t i2) {
+          return this->vector_set[i1][axis] < this->vector_set[i2][axis];
+        });
         size_t median_idx = *median_it;
         int loc = this->vector_set[median_idx][axis];
 
         // check whether the maximal element on the left is equal to loc
         // (with respect to dimension axis) to determine if the split is clean
-        auto max_it = std::max_element (begin_it, median_it,
-          [this, &axis] (size_t i1, size_t i2) {
-            return this->vector_set[i1][axis] <
-                   this->vector_set[i2][axis];
-          });
+        auto max_it = std::max_element (begin_it, median_it, [this, &axis] (size_t i1, size_t i2) {
+          return this->vector_set[i1][axis] < this->vector_set[i2][axis];
+        });
         size_t max_idx = *max_it;
         bool clean = (this->vector_set[max_idx][axis] < loc);
 
         // some sanity checks about the sublists
         assert (std::distance (begin_it, median_it) > 0);
         assert (std::distance (median_it, end_it) > 0);
-        assert (static_cast<size_t>(std::distance (begin_it, median_it)) == length / 2);
-        assert (static_cast<size_t>(std::distance (median_it, end_it)) == length - (length / 2));
-        assert (static_cast<size_t>(std::distance (begin_it, median_it)) +
-                std::distance (median_it, end_it) == length);
+        assert (static_cast<size_t> (std::distance (begin_it, median_it)) == length / 2);
+        assert (static_cast<size_t> (std::distance (median_it, end_it)) == length - (length / 2));
+        assert (static_cast<size_t> (std::distance (begin_it, median_it)) +
+                    std::distance (median_it, end_it) ==
+                length);
         assert (this->vector_set[max_idx][axis] <= loc);
 
         // the next axis is just the following dimension, wrapping around
@@ -115,10 +112,8 @@ namespace posets::utils {
         this->tree[result].axis = axis;
         this->tree[result].clean_split = clean;
         // now the recursive calls
-        recursive_build ((result * 2) + 1, begin_it, median_it,
-                         length / 2, next_axis);
-        recursive_build ((result * 2) + 2, median_it, end_it,
-                         length - (length / 2), next_axis);
+        recursive_build ((result * 2) + 1, begin_it, median_it, length / 2, next_axis);
+        recursive_build ((result * 2) + 2, median_it, end_it, length - (length / 2), next_axis);
         return;
       }
 
@@ -131,12 +126,12 @@ namespace posets::utils {
        * counter dims_to_dom which records the dimensions on which the current
        * region is not yet dominating the region of v
        */
-      bool recursive_dominates (const V& v, bool strict,
-                                size_t node_idx,
-                                int* lbounds, size_t dims_to_dom) const {
+      bool recursive_dominates (const V& v, bool strict, size_t node_idx, int* lbounds,
+                                size_t dims_to_dom) const {
         // sanity checks
         assert (this->tree != nullptr);
-        assert (static_cast<size_t> (4 << (int)(std::floor (std::log2 (this->vector_set.size ())))) > node_idx);
+        assert (static_cast<size_t> (
+                    4 << (int) (std::floor (std::log2 (this->vector_set.size ())))) > node_idx);
         assert (dims_to_dom > 0);
 
         // from index to node pointer
@@ -157,19 +152,18 @@ namespace posets::utils {
         const int old_bound = lbounds[node->axis];
         size_t still_to_dom = dims_to_dom;
         assert (node->location >= old_bound);
-        if (node->location > v[node->axis] &&
-            old_bound <= v[node->axis]) {
+        if (node->location > v[node->axis] && old_bound <= v[node->axis])
           still_to_dom--;
-        } else if (!strict && node->location >= v[node->axis] &&
-                   old_bound < v[node->axis]) {
+        else if (!strict && node->location >= v[node->axis] && old_bound < v[node->axis])
           still_to_dom--;
-        }
-        if (still_to_dom == 0) return true;
+        if (still_to_dom == 0)
+          return true;
         lbounds[node->axis] = node->location;
 
         // if we got here, we need to check on the right recursively
         bool r_succ = recursive_dominates (v, strict, (2 * node_idx) + 2, lbounds, still_to_dom);
-        if (r_succ) return true;
+        if (r_succ)
+          return true;
 
         // all that's left is to check on the left recursively, if pertinent
         lbounds[node->axis] = old_bound;
@@ -196,8 +190,8 @@ namespace posets::utils {
         // Let n be the size of vector_set, the no. of leaves in the tree is
         // 2^{floor(lg(n)) + 1}, so this times 2 is the size of the full
         // binary tree we will be labelling
-        size_t oldsize = 4 << (size_t)(std::floor (std::log2 (this->vector_set.size ())));
-        size_t tsize = 4 << (size_t)(std::floor (std::log2 (elements.size ())));
+        size_t oldsize = 4 << (size_t) (std::floor (std::log2 (this->vector_set.size ())));
+        size_t tsize = 4 << (size_t) (std::floor (std::log2 (elements.size ())));
 
         // moving the given elements to the internal data structure
         std::vector<V> newset;
@@ -219,31 +213,36 @@ namespace posets::utils {
           delete[] this->tree;
           this->tree = new kdtree_node[tsize];
         }
-        recursive_build (0, points.begin (), points.end (),
-                         points.size (), 0);
+        recursive_build (0, points.begin (), points.end (), points.size (), 0);
       }
 
-      kdtree () : tree (nullptr) {}   // FIXME: shall we delete this? it makes a kdtree
-                                      // without knowing the size of anything!
+      kdtree ()
+        : tree (nullptr) {}  // FIXME: shall we delete this? it makes a kdtree
+                             // without knowing the size of anything!
       kdtree (size_t dim) : dim (dim), tree (nullptr) {}
       kdtree (size_t dim, size_t initsize) : dim (dim) {
-        size_t tsize = 4 << (size_t)(std::floor (std::log2 (initsize)));
+        size_t tsize = 4 << (size_t) (std::floor (std::log2 (initsize)));
         this->tree = new kdtree_node[tsize];
       }
       template <std::ranges::input_range R, class Proj = std::identity>
-      kdtree (R&& elements, Proj proj = {}) : dim (proj (*elements.begin ()).size ()),
-                                              tree (nullptr) {
-        relabel_tree(std::move (elements), proj);
+      kdtree (R&& elements, Proj proj = {})
+        : dim (proj (*elements.begin ()).size ()),
+          tree (nullptr) {
+        relabel_tree (std::move (elements), proj);
       }
 
       kdtree (const kdtree& other) = delete;
-      kdtree (kdtree&& other) : dim (other.dim),
-                                tree (other.tree),
-                                vector_set (std::move (other.vector_set)) {
+      kdtree (kdtree&& other)
+        : dim (other.dim),
+          tree (other.tree),
+          vector_set (std::move (other.vector_set)) {
         other.tree = nullptr;
       }
 
-      ~kdtree () { if (this->tree != nullptr) delete[] this->tree; }
+      ~kdtree () {
+        if (this->tree != nullptr)
+          delete[] this->tree;
+      }
 
       kdtree& operator= (kdtree&& other) {
         this->dim = other.dim;
@@ -272,34 +271,19 @@ namespace posets::utils {
         for (auto it = this->begin (); it != this->end (); ++it) {
           for (auto it2 = it + 1; it2 != this->end (); ++it2) {
             auto po = it->partial_order (*it2);
-            if (po.leq () or po.geq ()) {
+            if (po.leq () or po.geq ())
               return false;
-            }
           }
         }
         return true;
       }
-      bool operator== (const kdtree& other) const {
-        return this->vector_set == other->vector_set;
-      }
-      auto size () const {
-        return this->vector_set.size ();
-      }
-      bool empty () {
-        return this->vector_set.empty ();
-      }
-      auto begin () noexcept {
-        return this->vector_set.begin ();
-      }
-      const auto begin () const noexcept {
-        return this->vector_set.begin ();
-      }
-      auto end () noexcept {
-        return this->vector_set.end ();
-      }
-      const auto end () const noexcept {
-        return this->vector_set.end ();
-      }
+      bool operator== (const kdtree& other) const { return this->vector_set == other->vector_set; }
+      auto size () const { return this->vector_set.size (); }
+      bool empty () { return this->vector_set.empty (); }
+      auto begin () noexcept { return this->vector_set.begin (); }
+      const auto begin () const noexcept { return this->vector_set.begin (); }
+      auto end () noexcept { return this->vector_set.end (); }
+      const auto end () const noexcept { return this->vector_set.end (); }
   };
 
   template <Vector V>
