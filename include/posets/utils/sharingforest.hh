@@ -360,29 +360,45 @@ private:
     st_node newNode{label, 0};
     // We have not reached the last layer - so add children
     if (currentLayer < this->dim) {
-      // TODO: Try to do constant-access bucketing based on the value of k.
-      // Probably won't pay off unless the set of vectors we are adding is
-      // dense in most components.
-      std::map<typename V::value_type, std::vector<size_t>, std::greater<typename V::value_type> >
-          newPartition{}; // Partition and order the future children
-      for (auto const &vec : vecs) {
-        newPartition[elementVec[vec][currentLayer]].push_back(vec);
-      }
-      newNode.cbuffer_offset = addChildren(newPartition.size());
-
-      for (auto &[n, children] : newPartition) {
-        // Build a new son for each individual value at currentLayer + 1
-        size_t newSon = build_node(children, currentLayer + 1, elementVec);
-        bool found = false;
-        size_t* currentChildren = child_buffer + newNode.cbuffer_offset;
-        for (size_t s = 0; s < newNode.numchild; s++)
+      if (vecs.size() == 1) {
+        auto& vec = elementVec[vecs[0]];
+        st_node lastSonNode{vec[vec.size() - 1], 0};
+        size_t nextSon = addNode(lastSonNode, this->dim);
+        for (size_t i = vec.size() - 1; i > currentLayer; i--)
         {
-          if(simulates(currentChildren[s], newSon, currentLayer + 1)) {
-            found = true;
-            break;
-          }
+          st_node sonNode{vec[i - 1], 0};
+          sonNode.cbuffer_offset = addChildren(1);
+          addSon(sonNode, i + 1, nextSon);
+          nextSon = addNode(sonNode, i);
         }
-        if(!found) addSon(newNode, currentLayer + 1, newSon);
+        newNode.cbuffer_offset = addChildren(1);
+        addSon(newNode, currentLayer + 1, nextSon);
+      }
+      else {
+        // TODO: Try to do constant-access bucketing based on the value of k.
+        // Probably won't pay off unless the set of vectors we are adding is
+        // dense in most components.
+        std::map<typename V::value_type, std::vector<size_t>, std::greater<typename V::value_type> >
+            newPartition{}; // Partition and order the future children
+        for (auto const &vec : vecs) {
+          newPartition[elementVec[vec][currentLayer]].push_back(vec);
+        }
+        newNode.cbuffer_offset = addChildren(newPartition.size());
+
+        for (auto &[n, children] : newPartition) {
+          // Build a new son for each individual value at currentLayer + 1
+          size_t newSon = build_node(children, currentLayer + 1, elementVec);
+          bool found = false;
+          size_t* currentChildren = child_buffer + newNode.cbuffer_offset;
+          for (size_t s = 0; s < newNode.numchild; s++)
+          {
+            if(simulates(currentChildren[s], newSon, currentLayer + 1)) {
+              found = true;
+              break;
+            }
+          }
+          if(!found) addSon(newNode, currentLayer + 1, newSon);
+        }
       }
     }
     return addNode(newNode, currentLayer);
@@ -460,7 +476,7 @@ public:
     assert(layer <= this->dim);
     st_node& node = layers[layer][n];
     size_t* children = child_buffer + node.cbuffer_offset;
-    std::cout << std::string(layer, '\t') << layer << "." << n << " [" << node.label << "] -> (" << (layer == this->dim? "" : "\n");
+    std::cout << std::string(layer, '\t') << layer << "." << n << " [" << static_cast<int>(node.label) << "] -> (" << (layer == this->dim? "" : "\n");
     for (size_t i = 0; i < node.numchild; i++)
     {
       print_children(children[i], layer + 1);
@@ -584,7 +600,7 @@ inline std::ostream &operator<<(std::ostream &os, const sharingforest<V> &f) {
   os << "Layers:" << std::endl;
   for(auto& l : f.layers) {
     for(auto& n: l) {
-      os << n.label << " ";
+      os << static_cast<int>(n.label) << " ";
     }
     os << std::endl;
   }
