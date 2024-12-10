@@ -549,7 +549,7 @@ public:
 
         if (c_t < node_t.numchild) current_stack.push({n_s, c_s, n_t, c_t + 1, layer, father});
         else if (c_s < node_s.numchild) current_stack.push({n_s, c_s + 1, n_t, 0, layer, father});
-        current_stack.push({node_s_children[c_s], 0, node_t_children[c_t], 0, layer + 1, under_construction});
+        if(c_t < node_t.numchild and c_s < node_s.numchild) current_stack.push({node_s_children[c_s], 0, node_t_children[c_t], 0, layer + 1, under_construction});
       }
     }
 
