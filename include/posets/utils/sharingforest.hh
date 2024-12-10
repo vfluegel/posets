@@ -208,9 +208,9 @@ private:
         size_t *node_1_children = child_buffer + node_1.cbuffer_offset;
         size_t *node_2_children = child_buffer + node_2.cbuffer_offset;
         // we can check deeper, and the next child on the n2 side later
-        if (layers[layer + 1][node_2_children[c2]].label <=
-            layers[layer + 1][node_1_children[c1]].label) {
-          if (c2 + 1 < node_2.numchild)
+        if (layers[layer + 1][node_2_children[c_2]].label <=
+            layers[layer + 1][node_1_children[c_1]].label) {
+          if (c_2 + 1 < node_2.numchild)
             current_stack.push({n_1, 0, n_2, c_2 + 1, layer});
           if (layer < this->dim)
             current_stack.push({node_1_children[c_1], 0,
