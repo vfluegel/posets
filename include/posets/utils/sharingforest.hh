@@ -492,40 +492,43 @@ public:
     // Stack contains node and child ID of S, node and child ID of T, layer
     std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> current_stack;
 
-    st_node &rootNode1 = layers[0][root1];
-    st_node &rootNode2 = layers[0][root2];
+    st_node rootNode1 = layers[0][root1];
+    st_node rootNode2 = layers[0][root2];
     assert(rootNode1.numchild > 0 and rootNode2.numchild > 0);
     size_t *root1_children = child_buffer + rootNode1.cbuffer_offset;
     size_t *root2_children = child_buffer + rootNode2.cbuffer_offset;
 
     // Insert a draft of root node, dirty one without checking if it's there,
     // we'll clean later
-    st_node iRoot{static_cast<typename V::value_type>(-1), 0};
-    iRoot.cbuffer_offset = addChildren(rootNode1.numchild + rootNode2.numchild);
-    layers[0].push_back(iRoot);
+    layers[0].emplace_back(static_cast<typename V::value_type>(-1), 0,
+                           addChildren(rootNode1.numchild + rootNode2.numchild));
 
     // We are ready to start a stack-simulated DFS of the synchronized-product
     // of the trees
-    for (size_t c_1 = 1; c_1 <= rootNode1.numchild; c_1++)
-      for (size_t c_2 = 1; c_2 <= rootNode2.numchild; c_2++)
+    for (size_t c_1 = 1; c_1 <= rootNode1.numchild; c_1++) {
+      for (size_t c_2 = 1; c_2 <= rootNode2.numchild; c_2++) {
         current_stack.push({root1_children[rootNode1.numchild - c_1], 0,
                             root2_children[rootNode2.numchild - c_2], 0, 1});
+      }
+    }
  
     while (not current_stack.empty()) {
       auto [n_s, c_s, n_t, c_t, layer] = current_stack.top();
       current_stack.pop();
-      assert(n_s < layers[layer].numchild);
-      st_node &node_s = layers[layer][n_s];
-      assert(n_t < layers[layer].numchild);
-      st_node &node_t = layers[layer][n_t];
+      assert(n_s < layers[layer].size());
+      st_node node_s = layers[layer][n_s];
+      assert(n_t < layers[layer].size());
+      st_node node_t = layers[layer][n_t];
 
       // It's the first time we see this product node, so let's insert a draft
       // of it, again dirty
       if (c_s == 0 and c_t == 0) {
-        st_node dirty{std::min(node_s.label, node_t.label), 0};
-        if (layer < this->dim)
-          dirty.cbuffer_offset = addChildren(node_s.numchild + node_t.numchild);
-        layers[layer].push_back(dirty);
+        if (layer < this->dim) {
+          layers[layer].emplace_back(std::min(node_s.label, node_t.label), 0,
+                                     addChildren(node_s.numchild + node_t.numchild));
+        } else {
+          layers[layer].emplace_back(std::min(node_s.label, node_t.label), 0);
+        }
       }
 
       // This is our base case, we've iterated through all the children in the
@@ -545,24 +548,26 @@ public:
             size_t newSon = node_union(existingSon.value(), intersectRes.value(), layer);
             size_t* newNode_children = child_buffer + father.cbuffer_offset;
             newNode_children[existingSon.value()] = newSon;
-          } else
+          } else {
             addSon(father, layer, intersectRes.value());
+          }
           
         }
-      }
       // Below we have the "recursive" step in which we put two elements into
       // the stack to remember what was the next child of the node at this
       // level and to go deeper in the tree if needed
-      else if (layer < this->dim) {
+      } else if (layer < this->dim) {
         size_t *node_s_children = child_buffer + node_s.cbuffer_offset;
         size_t *node_t_children = child_buffer + node_t.cbuffer_offset;
 
-        if (c_t < node_t.numchild)
+        if (c_t < node_t.numchild) {
           current_stack.push({n_s, c_s, n_t, c_t + 1, layer});
-        else if (c_s < node_s.numchild)
+        } else if (c_s < node_s.numchild) {
           current_stack.push({n_s, c_s + 1, n_t, 0, layer});
-        if (c_t < node_t.numchild and c_s < node_s.numchild)
+        }
+        if (c_t < node_t.numchild and c_s < node_s.numchild) {
           current_stack.push({node_s_children[c_s], 0, node_t_children[c_t], 0, layer + 1});
+        }
       }
     }
 
