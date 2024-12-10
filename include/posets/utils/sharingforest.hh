@@ -514,7 +514,9 @@ public:
     while (not current_stack.empty()) {
       auto [n_s, c_s, n_t, c_t, layer] = current_stack.top();
       current_stack.pop();
+      assert(n_s < layers[layer].numchild);
       st_node &node_s = layers[layer][n_s];
+      assert(n_t < layers[layer].numchild);
       st_node &node_t = layers[layer][n_t];
 
       // It's the first time we see this product node, so let's insert a draft
