@@ -506,12 +506,10 @@ public:
 
     // We are ready to start a stack-simulated DFS of the synchronized-product
     // of the trees
-    for (size_t c_1 = 1; c_1 <= rootNode1.numchild; c_1++) {
-      for (size_t c_2 = 1; c_2 <= rootNode2.numchild; c_2++) {
+    for (size_t c_1 = 1; c_1 <= rootNode1.numchild; c_1++)
+      for (size_t c_2 = 1; c_2 <= rootNode2.numchild; c_2++)
         current_stack.push({root1_children[rootNode1.numchild - c_1], 0,
                             root2_children[rootNode2.numchild - c_2], 0, 1});
-      }
-    }
  
     while (not current_stack.empty()) {
       auto [n_s, c_s, n_t, c_t, layer] = current_stack.top();
@@ -533,15 +531,9 @@ public:
       if (c_s == node_s.numchild and c_t == node_t.numchild) {
         // The very first thing to do is to check whether our draft of node is
         // not a repetition of something in the table already!
-        size_t draft = layers[layer].size() - 1;
-        auto existingNode = inverse[layer].find(layers[layer][draft]);
-        if (existingNode != inverse[layer].end()) {
-          draft = existingNode->second;
-          layers[layer].pop_back();
-        }
-        auto &under_construction = layers[layer][draft];
+        auto under_construction = layers[layer].back();
         auto &father = layers[layer - 1].back();
-
+        layers[layer].pop_back();
         auto intersectRes = add_if_not_simulated(under_construction,
                                                  layer, father);
         if (intersectRes.has_value()) {
@@ -574,13 +566,9 @@ public:
 
     // Clean up the root too! It's added to the layer, so we just need to make
     // sure it's not there already and remove this second copy if it is
-    size_t draft = layers[0].size() - 1;
-    auto existingNode = inverse[0].find(layers[0][draft]);
-    if (existingNode != inverse[0].end()) {
-      draft = existingNode->second;
-      layers[0].pop_back();
-    }
-    return draft;
+    auto under_construction = layers[0].back();
+    layers[0].pop_back();
+    return addNode(under_construction, 0);
   }
 
   /* Recursive domination check of given vector by vectors in the language of
