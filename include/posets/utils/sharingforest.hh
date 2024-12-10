@@ -229,7 +229,7 @@ private:
   std::optional<size_t> add_if_not_simulated(st_node &node, size_t destinationLayer, st_node &father) {
     size_t* siblings = child_buffer + father.cbuffer_offset;
     for(size_t s = 0; s < father.numchild; s++) {
-      if(simulates_node(layers[destinationLayer][siblings[s]], node, destinationLayer + 1)) {
+      if (simulates_node(layers[destinationLayer][siblings[s]], node, destinationLayer + 1)) {
         return std::nullopt;
       }
     }
@@ -364,8 +364,7 @@ private:
         auto& vec = elementVec[vecs[0]];
         st_node lastSonNode{vec[vec.size() - 1], 0};
         size_t nextSon = addNode(lastSonNode, this->dim);
-        for (size_t i = vec.size() - 1; i > currentLayer; i--)
-        {
+        for (size_t i = vec.size() - 1; i > currentLayer; i--) {
           st_node sonNode{vec[i - 1], 0};
           sonNode.cbuffer_offset = addChildren(1);
           addSon(sonNode, i + 1, nextSon);
@@ -373,13 +372,14 @@ private:
         }
         newNode.cbuffer_offset = addChildren(1);
         addSon(newNode, currentLayer + 1, nextSon);
-      }
-      else {
+      } else {
+        // Partition and order the future children
         // TODO: Try to do constant-access bucketing based on the value of k.
         // Probably won't pay off unless the set of vectors we are adding is
         // dense in most components.
-        std::map<typename V::value_type, std::vector<size_t>, std::greater<typename V::value_type> >
-            newPartition{}; // Partition and order the future children
+        std::map<typename V::value_type,
+                 std::vector<size_t>,
+                 std::greater<typename V::value_type>> newPartition{};
         for (auto const &vec : vecs) {
           newPartition[elementVec[vec][currentLayer]].push_back(vec);
         }
@@ -390,14 +390,14 @@ private:
           size_t newSon = build_node(children, currentLayer + 1, elementVec);
           bool found = false;
           size_t* currentChildren = child_buffer + newNode.cbuffer_offset;
-          for (size_t s = 0; s < newNode.numchild; s++)
-          {
-            if(simulates(currentChildren[s], newSon, currentLayer + 1)) {
+          for (size_t s = 0; s < newNode.numchild; s++) {
+            if (simulates(currentChildren[s], newSon, currentLayer + 1)) {
               found = true;
               break;
             }
           }
-          if(!found) addSon(newNode, currentLayer + 1, newSon);
+          if (!found)
+            addSon(newNode, currentLayer + 1, newSon);
         }
       }
     }
@@ -489,8 +489,8 @@ public:
   }
 
   size_t st_intersect(size_t root1, size_t root2) {
-    // Stack contains node and child ID of S, node and child ID of T, layer, father
-    std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t, st_node*>> current_stack;
+    // Stack contains node and child ID of S, node and child ID of T, layer
+    std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> current_stack;
 
     st_node &rootNode1 = layers[0][root1];
     st_node &rootNode2 = layers[0][root2];
@@ -498,62 +498,89 @@ public:
     size_t *root1_children = child_buffer + rootNode1.cbuffer_offset;
     size_t *root2_children = child_buffer + rootNode2.cbuffer_offset;
 
+    // Insert a draft of root node, dirty one without checking if it's there,
+    // we'll clean later
     st_node iRoot{static_cast<typename V::value_type>(-1), 0};
     iRoot.cbuffer_offset = addChildren(rootNode1.numchild + rootNode2.numchild);
-    for (size_t c_1 = 1; c_1 <= rootNode1.numchild; c_1++)
-    {
-      for (size_t c_2 = 1; c_2 <= rootNode2.numchild; c_2++)
-      {
-        current_stack.push({root1_children[rootNode1.numchild - c_1], 0, root2_children[rootNode2.numchild - c_2], 0, 1, &iRoot});
+    layers[0].push_back(iRoot);
+
+    // We are ready to start a stack-simulated DFS of the synchronized-product
+    // of the trees
+    for (size_t c_1 = 1; c_1 <= rootNode1.numchild; c_1++) {
+      for (size_t c_2 = 1; c_2 <= rootNode2.numchild; c_2++) {
+        current_stack.push({root1_children[rootNode1.numchild - c_1], 0,
+                            root2_children[rootNode2.numchild - c_2], 0, 1});
       }
     }
  
-    st_node *under_construction;
-    while (not current_stack.empty()) 
-    {
-      auto [n_s, c_s, n_t, c_t, layer, father] = current_stack.top();
+    while (not current_stack.empty()) {
+      auto [n_s, c_s, n_t, c_t, layer] = current_stack.top();
       current_stack.pop();
       st_node &node_s = layers[layer][n_s];
       st_node &node_t = layers[layer][n_t];
 
-      if (c_s == 0 and c_t == 0) 
-      {
-        under_construction = new st_node(std::min(node_s.label, node_t.label), 0);
-        if (layer < this->dim) under_construction->cbuffer_offset = addChildren(node_s.numchild + node_t.numchild);
+      // It's the first time we see this product node, so let's insert a draft
+      // of it, again dirty
+      if (c_s == 0 and c_t == 0) {
+        st_node dirty{std::min(node_s.label, node_t.label), 0};
+        if (layer < this->dim)
+          dirty.cbuffer_offset = addChildren(node_s.numchild + node_t.numchild);
+        layers[layer].push_back(dirty);
       }
 
+      // This is our base case, we've iterated through all the children in the
+      // product tree, it's finally time to clean up stuff
       if (c_s == node_s.numchild and c_t == node_t.numchild) {
-        auto intersectRes = add_if_not_simulated(*under_construction, layer, *father);
-        if(intersectRes.has_value()) {
-          // Can happen that we insert the same value twice, so we need to check
-          auto existingSon = hasSon(*father, layer, under_construction->label);
-          if(existingSon.has_value()) {
-            size_t newSon = node_union(existingSon.value(), intersectRes.value(), layer);
-            size_t* newNode_children = child_buffer + father->cbuffer_offset;
-            newNode_children[existingSon.value()] = newSon;
-          }
-          else {
-            addSon(*father, layer, intersectRes.value());
-          }
+        // The very first thing to do is to check whether our draft of node is
+        // not a repetition of something in the table already!
+        size_t draft = layers[layer].size() - 1;
+        auto existingNode = inverse[layer].find(layers[layer][draft]);
+        if (existingNode != inverse[layer].end()) {
+          draft = existingNode->second;
+          layers[layer].pop_back();
         }
-        else {
-          delete under_construction;
-        }
-        under_construction = father;
-      }
+        auto &under_construction = layers[layer][draft];
+        auto &father = layers[layer - 1].back();
 
-      else if (layer < this->dim) 
-      {
+        auto intersectRes = add_if_not_simulated(under_construction,
+                                                 layer, father);
+        if (intersectRes.has_value()) {
+          // It can happen that we insert two children with same label, so we need to check
+          auto existingSon = hasSon(father, layer, under_construction.label);
+          if (existingSon.has_value()) {
+            size_t newSon = node_union(existingSon.value(), intersectRes.value(), layer);
+            size_t* newNode_children = child_buffer + father.cbuffer_offset;
+            newNode_children[existingSon.value()] = newSon;
+          } else
+            addSon(father, layer, intersectRes.value());
+          
+        }
+      }
+      // Below we have the "recursive" step in which we put two elements into
+      // the stack to remember what was the next child of the node at this
+      // level and to go deeper in the tree if needed
+      else if (layer < this->dim) {
         size_t *node_s_children = child_buffer + node_s.cbuffer_offset;
         size_t *node_t_children = child_buffer + node_t.cbuffer_offset;
 
-        if (c_t < node_t.numchild) current_stack.push({n_s, c_s, n_t, c_t + 1, layer, father});
-        else if (c_s < node_s.numchild) current_stack.push({n_s, c_s + 1, n_t, 0, layer, father});
-        if(c_t < node_t.numchild and c_s < node_s.numchild) current_stack.push({node_s_children[c_s], 0, node_t_children[c_t], 0, layer + 1, under_construction});
+        if (c_t < node_t.numchild)
+          current_stack.push({n_s, c_s, n_t, c_t + 1, layer});
+        else if (c_s < node_s.numchild)
+          current_stack.push({n_s, c_s + 1, n_t, 0, layer});
+        if (c_t < node_t.numchild and c_s < node_s.numchild)
+          current_stack.push({node_s_children[c_s], 0, node_t_children[c_t], 0, layer + 1});
       }
     }
 
-    return addNode(iRoot, 0);
+    // Clean up the root too! It's added to the layer, so we just need to make
+    // sure it's not there already and remove this second copy if it is
+    size_t draft = layers[0].size() - 1;
+    auto existingNode = inverse[0].find(layers[0][draft]);
+    if (existingNode != inverse[0].end()) {
+      draft = existingNode->second;
+      layers[0].pop_back();
+    }
+    return draft;
   }
 
   /* Recursive domination check of given vector by vectors in the language of
