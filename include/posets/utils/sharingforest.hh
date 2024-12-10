@@ -489,7 +489,71 @@ public:
   }
 
   size_t st_intersect(size_t root1, size_t root2) {
-    return node_intersect(root1, root2, 0, std::nullopt).value();
+    // Stack contains node and child ID of S, node and child ID of T, layer, father
+    std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t, st_node*>> current_stack;
+
+    st_node &rootNode1 = layers[0][root1];
+    st_node &rootNode2 = layers[0][root2];
+    assert(rootNode1.numchild > 0 and rootNode2.numchild > 0);
+    size_t *root1_children = child_buffer + rootNode1.cbuffer_offset;
+    size_t *root2_children = child_buffer + rootNode2.cbuffer_offset;
+
+    st_node iRoot{static_cast<typename V::value_type>(-1), 0};
+    iRoot.cbuffer_offset = addChildren(rootNode1.numchild + rootNode2.numchild);
+    for (size_t c_1 = 1; c_1 <= rootNode1.numchild; c_1++)
+    {
+      for (size_t c_2 = 1; c_2 <= rootNode2.numchild; c_2++)
+      {
+        current_stack.push({root1_children[rootNode1.numchild - c_1], 0, root2_children[rootNode2.numchild - c_2], 0, 1, &iRoot});
+      }
+    }
+ 
+    st_node *under_construction;
+    while (not current_stack.empty()) 
+    {
+      auto [n_s, c_s, n_t, c_t, layer, father] = current_stack.top();
+      current_stack.pop();
+      st_node &node_s = layers[layer][n_s];
+      st_node &node_t = layers[layer][n_t];
+
+      if (c_s == 0 and c_t == 0) 
+      {
+        under_construction = new st_node(std::min(node_s.label, node_t.label), 0);
+        if (layer < this->dim) under_construction->cbuffer_offset = addChildren(node_s.numchild + node_t.numchild);
+      }
+
+      if (c_s == node_s.numchild and c_t == node_t.numchild) {
+        auto intersectRes = add_if_not_simulated(*under_construction, layer, *father);
+        if(intersectRes.has_value()) {
+          // Can happen that we insert the same value twice, so we need to check
+          auto existingSon = hasSon(*father, layer, under_construction->label);
+          if(existingSon.has_value()) {
+            size_t newSon = node_union(existingSon.value(), intersectRes.value(), layer);
+            size_t* newNode_children = child_buffer + father->cbuffer_offset;
+            newNode_children[existingSon.value()] = newSon;
+          }
+          else {
+            addSon(*father, layer, intersectRes.value());
+          }
+        }
+        else {
+          delete under_construction;
+        }
+        under_construction = father;
+      }
+
+      else if (layer < this->dim) 
+      {
+        size_t *node_s_children = child_buffer + node_s.cbuffer_offset;
+        size_t *node_t_children = child_buffer + node_t.cbuffer_offset;
+
+        if (c_t < node_t.numchild) current_stack.push({n_s, c_s, n_t, c_t + 1, layer, father});
+        else if (c_s < node_s.numchild) current_stack.push({n_s, c_s + 1, n_t, 0, layer, father});
+        current_stack.push({node_s_children[c_s], 0, node_t_children[c_t], 0, layer + 1, under_construction});
+      }
+    }
+
+    return addNode(iRoot, 0);
   }
 
   /* Recursive domination check of given vector by vectors in the language of

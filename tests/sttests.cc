@@ -21,6 +21,7 @@ int main(int argc, char const *argv[]) {
   std::vector<std::vector<char>> data{{6, 3, 2}, {5, 5, 4}, {2, 6, 2}};
   auto idcs = f.add_vectors(std::move(vvtovv(data)));
   std::cout << f << std::endl;
+  f.print_children(idcs, 0);
   std::vector<char> v = {2, 2, 2};
   assert(f.covers_vector(idcs, VType(std::move(v))));
   v = {6, 3, 1};
@@ -34,6 +35,7 @@ int main(int argc, char const *argv[]) {
   data = {{7, 4, 3}, {4, 8, 4}, {2, 5, 6}};
   auto idcs2 = f.add_vectors(std::move(vvtovv(data)));
   std::cout << f << std::endl;
+  f.print_children(idcs2, 0);
 
   // We repeat the tests above to check we did not break the previous tree
   v = {2, 2, 2};
@@ -85,6 +87,9 @@ int main(int argc, char const *argv[]) {
   // Union tests: Check for vectors that are only in one ST
   // and a vector that is in none
   auto uRoot = f.st_union(idcs, idcs2);
+  std::cout << "Union result:\n";
+  f.print_children(uRoot, 0);
+  
   v = {7, 4, 1};
   assert(f.covers_vector(uRoot, VType(std::move(v))));
   v = {5, 5, 3};
@@ -94,6 +99,8 @@ int main(int argc, char const *argv[]) {
 
   // Intersection test: Exact opposite of union
   auto iRoot = f.st_intersect(idcs, idcs2);
+  std::cout << "Intersection result:\n";
+  f.print_children(iRoot, 0);
   v = {7, 4, 1};
   assert(not f.covers_vector(iRoot, VType(std::move(v))));
   v = {5, 5, 3};
