@@ -7,6 +7,7 @@
 #include <optional>
 #include <ranges>
 #include <stack>
+#include <queue>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -166,21 +167,108 @@ private:
   /*
    Simulation: check if n1 simulates n2
   */
-  bool simulates(size_t n1, size_t n2, size_t nodeLayer) {
-    // First check if we already computed this and return if we do
-    auto node_pair = std::make_pair(n1, n2);
-    auto cached = simulating[nodeLayer].find(node_pair);
+  bool simulates(size_t node1, size_t node2, size_t nodeLayer) {
+    // We first check if there is a result cached for the given nodes
+    auto input_pair = std::make_pair(node1, node2);
+    auto cached = simulating[nodeLayer].find(input_pair);
     if(cached != simulating[nodeLayer].end()) {
       return cached->second;
     }
-    
-    st_node& node1 = layers[nodeLayer][n1];
-    st_node& node2 = layers[nodeLayer][n2];
-    // If the node is in the last layer, we just check the labels
-    bool res = simulates_node(node1, node2, nodeLayer + 1);
-    
-    // Store the result in the cache and return
-    simulating[nodeLayer][node_pair] = res;
+    if (nodeLayer == this->dim) return layers[nodeLayer][node1].label >= layers[nodeLayer][node2].label;
+
+    // No cached result found - We continue the check
+    // Stack with Node and Child ID for n1 and n2 and layer
+    std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> to_check;
+    // Queue with the next elements to put on the stack if necessary
+    std::queue<std::tuple<size_t, size_t, size_t, size_t>> candidate_paths;
+    to_check.push({node1, 0, node2, 0, nodeLayer});
+
+    bool res{ false };
+    while (not to_check.empty()) {
+      auto [n1, c1, n2, c2, layer] = to_check.top();
+      to_check.pop();
+      st_node& node1 = layers[layer][n1];
+      st_node& node2 = layers[layer][n2];
+
+      if (c2 < node2.numchild - 1) candidate_paths.push({n1, n2, c2 + 1, layer});
+
+      // We reached the last child but no simulating path, so the result is false
+      if (c1 == node1.numchild) 
+      {
+        res = false;
+        auto parent_pair = std::make_pair(n1, n2);
+        simulating[layer][parent_pair] = res;
+        if (not candidate_paths.empty()) {
+          auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
+          candidate_paths.pop();
+          to_check.push({newNode1, 0, newNode2, child, newLayer});
+        }
+      }
+      // We have checked all children without a contradiction, so the result is true 
+      else if (c2 == node2.numchild and res)
+      {
+        res = true;
+        auto parent_pair = std::make_pair(n1, n2);
+        simulating[layer][parent_pair] = res;
+        if (not candidate_paths.empty()) {
+          auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
+          candidate_paths.pop();
+          to_check.push({newNode1, 0, newNode2, child, newLayer});
+        }
+      }
+      // If the node is in the last layer, we just check the labels
+      else 
+      {  
+        size_t* n1_children = child_buffer + node1.cbuffer_offset;
+        size_t* n2_children = child_buffer + node2.cbuffer_offset;
+        st_node& child1 = layers[layer + 1][n1_children[c1]];
+        st_node& child2 = layers[layer + 1][n2_children[c2]];
+
+        // First check if we already computed this
+        auto node_pair = std::make_pair(n1_children[c1], n2_children[c2]);
+        auto cached = simulating[layer + 1].find(node_pair);
+        if(cached != simulating[layer + 1].end()) {
+          res = cached->second;
+          if (not res and c1 < node1.numchild) {
+            to_check.push({n1, c1 + 1, n2, c2, layer});
+          }
+          else if (not candidate_paths.empty()) {
+            auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
+            candidate_paths.pop();
+            to_check.push({newNode1, 0, newNode2, child, newLayer});
+          }
+        }
+        else if (layer == this->dim - 1)
+        {
+          res = child1.label >= child2.label;
+          simulating[layer + 1][node_pair] = res;
+          if (not res and c1 < node1.numchild) {
+            to_check.push({n1, c1 + 1, n2, c2, layer});
+          }
+          else if (not candidate_paths.empty()) {
+            auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
+            candidate_paths.pop();
+            to_check.push({newNode1, 0, newNode2, child, newLayer});
+          }
+        }
+        // If the values don't match we don't have to continue down the branch
+        else if (child1.label < child2.label) {
+          res = false;
+          simulating[layer + 1][node_pair] = res;
+          if(c1 < node1.numchild) {
+            to_check.push({n1, c1 + 1, n2, c2, layer});
+          }
+          else if (not candidate_paths.empty()) {
+            auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
+            candidate_paths.pop();
+            to_check.push({newNode1, 0, newNode2, child, newLayer});
+          }
+        }
+        else {
+          to_check.push({n1_children[c1], 0, n2_children[c2], 0, layer + 1});
+        } 
+      }
+    }
     return res;
   }
 
@@ -195,6 +283,37 @@ private:
 
     // Insert the new value
     children[last + 1] = son;
+    node.numchild++;
+  }
+
+  void addSonUnordered(st_node &node, size_t sonLayer, size_t son) {
+    // Find the insertion point using binary search
+    int left = 0;
+    int right = node.numchild - 1;
+    st_node &sonNode = layers[sonLayer][son];
+    size_t *children = child_buffer + node.cbuffer_offset;
+    while (left <= right) {
+      int mid = left + (right - left) / 2;
+      int midVal = layers[sonLayer][children[mid]].label;
+
+      if (sonNode.label == midVal) {
+        size_t newSon = node_union(son, children[mid], sonLayer);
+        children[mid] = newSon;
+        return;
+      } else if (midVal < sonNode.label) {
+        right = mid - 1;
+      } else {
+        left = mid + 1;
+      }
+
+    }
+    // Shift elements in the child buffer to make room for the new child
+    for (int i = node.numchild; i > left; i--) {
+      children[i] = children[i - 1];
+    }
+
+    // Insert the new value
+    children[left] = son;
     node.numchild++;
   }
 
@@ -549,7 +668,7 @@ public:
             size_t* newNode_children = child_buffer + father.cbuffer_offset;
             newNode_children[existingSon.value()] = newSon;
           } else {
-            addSon(father, layer, intersectRes.value());
+            addSonUnordered(father, layer, intersectRes.value());
           }
           
         }
