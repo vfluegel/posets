@@ -137,21 +137,19 @@ private:
     size_t* n1_children = child_buffer + n1.cbuffer_offset;
     size_t* n2_children = child_buffer + n2.cbuffer_offset;
     if(n1.label < n2.label || 
-        layers[sonLayer][n1_children[0]].label < layers[sonLayer][n2_children[n2.numchild - 1]].label)
-    {
+        layers[sonLayer][n1_children[0]].label <
+        layers[sonLayer][n2_children[n2.numchild - 1]].label) {
       // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
       // we already know it can't simulate
       return false;
     }
 
     // Check if we can find a corresponding son of n1 for every son of n2
-    for (size_t s2 = 0; s2 < n2.numchild; s2++)
-    {
+    for (size_t s2 = 0; s2 < n2.numchild; s2++) {
       bool found = false;
       for (size_t s1 = 0; s1 < n1.numchild and
                           layers[sonLayer][n2_children[s2]].label <=
-                          layers[sonLayer][n1_children[s1]].label; s1++)
-      {
+                          layers[sonLayer][n1_children[s1]].label; s1++) {
         if(simulates(n1_children[s1], n2_children[s2], sonLayer)) {
           found = true;
           break;
@@ -161,6 +159,69 @@ private:
       if(!found) return false;
     }
 
+    return true;
+  }
+
+  bool nonrec_simulates_node(st_node &n1, st_node &n2, size_t sonLayer) {
+    // If the node is in the last layer, we just check the labels
+    if(sonLayer == this->dim + 1) {
+      return n1.label >= n2.label;
+    }
+    size_t* n1_children = child_buffer + n1.cbuffer_offset;
+    size_t* n2_children = child_buffer + n2.cbuffer_offset;
+    if(n1.label < n2.label || 
+        layers[sonLayer][n1_children[0]].label <
+        layers[sonLayer][n2_children[n2.numchild - 1]].label) {
+      // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
+      // we already know it can't simulate
+      return false;
+    }
+
+    // Stack contains node and child ID of S, node and child ID of T, layer
+    std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> current_stack;
+
+    // Check if we can find a corresponding son of n1 for every son of n2
+    for (size_t s2 = 0; s2 < n2.numchild; s2++) {
+      for (size_t s1 = 0; s1 < n1.numchild and
+                          layers[sonLayer][n2_children[s2]].label <=
+                          layers[sonLayer][n1_children[s1]].label; s1++) {
+        current_stack.push({n1_children[s1], 0, n2_children[s2], 0, sonLayer});
+        break;
+      }
+    }
+ 
+    while (not current_stack.empty()) {
+      auto [n_1, c_1, n_2, c_2, layer] = current_stack.top();
+      current_stack.pop();
+      st_node node_1 = layers[layer][n_1];
+      st_node node_2 = layers[layer][n_2];
+
+      assert (c_2 < node_2.numchild);  // Invariant we're trying to maintain
+
+      // This is our base case, we've iterated through all the children on the
+      // n1 side and failed to find a simulating one
+      if (c_1 == node_1.numchild) {
+        simulating[layer][std::make_pair(n1, n2)] = false;
+        return false;
+      // The other case is that we have two valid children indices,
+      // then we can compare 
+      } else {
+        size_t *node_1_children = child_buffer + node_1.cbuffer_offset;
+        size_t *node_2_children = child_buffer + node_2.cbuffer_offset;
+        // we can check deeper, and the next child on the n2 side later
+        if (layers[layer + 1][node_2_children[c_2]].label <=
+            layers[layer + 1][node_1_children[c_1]].label) {
+          if (c_2 + 1 < node_2.numchild)
+            current_stack.push({n_1, 0, n_2, c_2 + 1, layer});
+          if (layer < this->dim)
+            current_stack.push({node_1_children[c_1], 0,
+                                node_2_children[c_2], 0, layer + 1});
+        // no dice, we need to advance to next child on the n1 side              
+        } else {
+          current_stack.push({n_1, c_1 + 1, n_2, c_2, layer});
+        }
+      }
+    }
     return true;
   }
 
