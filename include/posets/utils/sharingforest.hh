@@ -228,7 +228,24 @@ private:
   /*
    Simulation: check if n1 simulates n2
   */
-  bool simulates(size_t node1, size_t node2, size_t nodeLayer) {
+  bool simulates(size_t n1, size_t n2, size_t nodeLayer) {
+    // First check if we already computed this and return if we do
+    auto node_pair = std::make_pair(n1, n2);
+    auto cached = simulating[nodeLayer].find(node_pair);
+    if(cached != simulating[nodeLayer].end()) {
+      return cached->second;
+    }
+    
+    st_node& node1 = layers[nodeLayer][n1];
+    st_node& node2 = layers[nodeLayer][n2];
+    bool res = simulates_node(node1, node2, nodeLayer + 1);
+    
+    // Store the result in the cache and return
+    simulating[nodeLayer][node_pair] = res;
+    return res;
+  }
+
+  bool nonrec_simulates(size_t node1, size_t node2, size_t nodeLayer) {
     // We first check if there is a result cached for the given nodes
     auto input_pair = std::make_pair(node1, node2);
     auto cached = simulating[nodeLayer].find(input_pair);
@@ -240,18 +257,15 @@ private:
     // No cached result found - We continue the check
     // Stack with Node and Child ID for n1 and n2 and layer
     std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> to_check;
-    // Queue with the next elements to put on the stack if necessary
-    std::queue<std::tuple<size_t, size_t, size_t, size_t>> candidate_paths;
     to_check.push({node1, 0, node2, 0, nodeLayer});
 
     bool res{ false };
     while (not to_check.empty()) {
       auto [n1, c1, n2, c2, layer] = to_check.top();
       to_check.pop();
+      std::cout << "Pop layer " << layer << ", " << n1 << " child " << c1 << ", " << n2 << " child " << c2 << std::endl;
       st_node& node1 = layers[layer][n1];
       st_node& node2 = layers[layer][n2];
-
-      if (c2 < node2.numchild - 1) candidate_paths.push({n1, n2, c2 + 1, layer});
 
       // We reached the last child but no simulating path, so the result is false
       if (c1 == node1.numchild) 
@@ -259,11 +273,12 @@ private:
         res = false;
         auto parent_pair = std::make_pair(n1, n2);
         simulating[layer][parent_pair] = res;
-        if (not candidate_paths.empty()) {
-          auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
-          candidate_paths.pop();
-          to_check.push({newNode1, 0, newNode2, child, newLayer});
+        if (not to_check.empty()) {
+          auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
+          to_check.pop();
+          if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
         }
+        
       }
       // We have checked all children without a contradiction, so the result is true 
       else if (c2 == node2.numchild and res)
@@ -271,10 +286,10 @@ private:
         res = true;
         auto parent_pair = std::make_pair(n1, n2);
         simulating[layer][parent_pair] = res;
-        if (not candidate_paths.empty()) {
-          auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
-          candidate_paths.pop();
-          to_check.push({newNode1, 0, newNode2, child, newLayer});
+        if (not to_check.empty()) {
+          auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
+          to_check.pop();
+          if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
         }
       }
       // If the node is in the last layer, we just check the labels
@@ -293,10 +308,10 @@ private:
           if (not res and c1 < node1.numchild) {
             to_check.push({n1, c1 + 1, n2, c2, layer});
           }
-          else if (not candidate_paths.empty()) {
-            auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
-            candidate_paths.pop();
-            to_check.push({newNode1, 0, newNode2, child, newLayer});
+          else if (not to_check.empty()) {
+            auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
+            to_check.pop();
+            if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
           }
         }
         else if (layer == this->dim - 1)
@@ -306,10 +321,10 @@ private:
           if (not res and c1 < node1.numchild) {
             to_check.push({n1, c1 + 1, n2, c2, layer});
           }
-          else if (not candidate_paths.empty()) {
-            auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
-            candidate_paths.pop();
-            to_check.push({newNode1, 0, newNode2, child, newLayer});
+          else if (not to_check.empty()) {
+            auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
+            to_check.pop();
+            if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
           }
         }
         // If the values don't match we don't have to continue down the branch
@@ -319,10 +334,10 @@ private:
           if(c1 < node1.numchild) {
             to_check.push({n1, c1 + 1, n2, c2, layer});
           }
-          else if (not candidate_paths.empty()) {
-            auto [newNode1, newNode2, child, newLayer] = candidate_paths.front();
-            candidate_paths.pop();
-            to_check.push({newNode1, 0, newNode2, child, newLayer});
+          else if (not to_check.empty()) {
+            auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
+            to_check.pop();
+            if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
           }
         }
         else {
