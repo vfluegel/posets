@@ -165,7 +165,7 @@ private:
   // Guillermo: this algorithm is my claim to fame!
   // TODO: Make calls to simulates_node use indices instead of node references
   // by inserting a draft node
-  bool nonrec_simulates_node(size_t n1idx, size_t n2idx, size_t rootLayer) {
+  bool simulates(size_t n1idx, size_t n2idx, size_t rootLayer) {
     st_node n1 = layers[rootLayer][n1idx];
     st_node n2 = layers[rootLayer][n2idx];
     // If the node is in the last layer, we just check the labels
@@ -198,7 +198,7 @@ private:
       // branch to check on the n2 side
       if (c_2 == node_2.numchild  || layer == this->dim) {
         assert(c_2 == node_2.numchild);
-        simulating[layer][std::make_pair(n1, n2)] = true;
+        simulating[layer][std::make_pair(n_1, n_2)] = true;
         if (not current_stack.empty()) {
           auto [m_1, d_1, m_2, d_2, ell] = current_stack.top();
           current_stack.push({m_1, 0, m_2 + 1, 0, ell});
@@ -207,7 +207,7 @@ private:
       // Another base case: we've iterated through all the children on the
       // n1 side and failed to find a simulating one
       } else if (c_1 == node_1.numchild) {
-        simulating[layer][std::make_pair(n1, n2)] = false;
+        simulating[layer][std::make_pair(n_1, n_2)] = false;
         return false;
 
       // The last case is that we have two valid children indices,
@@ -251,7 +251,7 @@ private:
   /*
    Simulation: check if n1 simulates n2
   */
-  bool simulates(size_t n1, size_t n2, size_t nodeLayer) {
+  bool rec_simulates(size_t n1, size_t n2, size_t nodeLayer) {
     // First check if we already computed this and return if we do
     auto node_pair = std::make_pair(n1, n2);
     auto cached = simulating[nodeLayer].find(node_pair);
@@ -446,12 +446,13 @@ private:
 
   std::optional<size_t> add_if_not_simulated(st_node &node, size_t destinationLayer, st_node &father) {
     size_t* siblings = child_buffer + father.cbuffer_offset;
+    size_t res = addNode(node, destinationLayer);
     for(size_t s = 0; s < father.numchild; s++) {
-      if (simulates_node(layers[destinationLayer][siblings[s]], node, destinationLayer + 1)) {
+      if (simulates(siblings[s], res, destinationLayer)) {
         return std::nullopt;
       }
     }
-    return addNode(node, destinationLayer);
+    return res;
   }
 
   size_t node_union(size_t n_s, size_t n_t, size_t destinationLayer) {
