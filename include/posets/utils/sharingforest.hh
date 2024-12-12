@@ -162,16 +162,21 @@ private:
     return true;
   }
 
-  bool nonrec_simulates_node(st_node &n1, st_node &n2, size_t sonLayer) {
+  // Guillermo: this algorithm is my claim to fame!
+  // TODO: Make calls to simulates_node use indices instead of node references
+  // by inserting a draft node
+  bool nonrec_simulates_node(size_t n1idx, size_t n2idx, size_t rootLayer) {
+    st_node n1 = layers[rootLayer][n1idx];
+    st_node n2 = layers[rootLayer][n2idx];
     // If the node is in the last layer, we just check the labels
-    if(sonLayer == this->dim + 1) {
+    if (rootLayer == this->dim) {
       return n1.label >= n2.label;
     }
     size_t* n1_children = child_buffer + n1.cbuffer_offset;
     size_t* n2_children = child_buffer + n2.cbuffer_offset;
-    if(n1.label < n2.label || 
-        layers[sonLayer][n1_children[0]].label <
-        layers[sonLayer][n2_children[n2.numchild - 1]].label) {
+    if (n1.label < n2.label || 
+        layers[rootLayer + 1][n1_children[0]].label <
+        layers[rootLayer + 1][n2_children[n2.numchild - 1]].label) {
       // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
       // we already know it can't simulate
       return false;
@@ -179,16 +184,7 @@ private:
 
     // Stack contains node and child ID of S, node and child ID of T, layer
     std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> current_stack;
-
-    // Check if we can find a corresponding son of n1 for every son of n2
-    for (size_t s2 = 0; s2 < n2.numchild; s2++) {
-      for (size_t s1 = 0; s1 < n1.numchild and
-                          layers[sonLayer][n2_children[s2]].label <=
-                          layers[sonLayer][n1_children[s1]].label; s1++) {
-        current_stack.push({n1_children[s1], 0, n2_children[s2], 0, sonLayer});
-        break;
-      }
-    }
+    current_stack.push({n1idx, 0, n2idx, 0, rootLayer});
  
     while (not current_stack.empty()) {
       auto [n_1, c_1, n_2, c_2, layer] = current_stack.top();
@@ -196,29 +192,56 @@ private:
       st_node node_1 = layers[layer][n_1];
       st_node node_2 = layers[layer][n_2];
 
-      assert (c_2 < node_2.numchild);  // Invariant we're trying to maintain
+      // This is our base case, no more things to check on the n2 side
+      // We now claim success for n2 being simulated by n1 and update the top
+      // of the stack so that when we go back up in the tree we have one less
+      // branch to check on the n2 side
+      if (c_2 == node_2.numchild  || layer == this->dim) {
+        assert(c_2 == node_2.numchild);
+        simulating[layer][std::make_pair(n1, n2)] = true;
+        if (not current_stack.empty()) {
+          auto [m_1, d_1, m_2, d_2, ell] = current_stack.top();
+          current_stack.push({m_1, 0, m_2 + 1, 0, ell});
+        }
 
-      // This is our base case, we've iterated through all the children on the
+      // Another base case: we've iterated through all the children on the
       // n1 side and failed to find a simulating one
-      if (c_1 == node_1.numchild) {
+      } else if (c_1 == node_1.numchild) {
         simulating[layer][std::make_pair(n1, n2)] = false;
         return false;
-      // The other case is that we have two valid children indices,
-      // then we can compare 
+
+      // The last case is that we have two valid children indices,
+      // then we have to go deeper in the product tree (lest the cache saves
+      // us)
       } else {
         size_t *node_1_children = child_buffer + node_1.cbuffer_offset;
         size_t *node_2_children = child_buffer + node_2.cbuffer_offset;
-        // we can check deeper, and the next child on the n2 side later
-        if (layers[layer + 1][node_2_children[c_2]].label <=
-            layers[layer + 1][node_1_children[c_1]].label) {
-          if (c_2 + 1 < node_2.numchild)
+        auto node_pair = std::make_pair(node_1_children[c_1],
+                                        node_2_children[c_2]);
+        auto cached = simulating[layer + 1].find(node_pair);
+        // Did we get lucky with the cache? then push back an updated node
+        // with less obligations or keep searching on the n1 side
+        if (cached != simulating[layer + 1].end()) {
+          if (cached->second)
             current_stack.push({n_1, 0, n_2, c_2 + 1, layer});
-          if (layer < this->dim)
-            current_stack.push({node_1_children[c_1], 0,
-                                node_2_children[c_2], 0, layer + 1});
-        // no dice, we need to advance to next child on the n1 side              
+          else 
+            current_stack.push({n_1, c_1 + 1, n_2, c_2, layer});
         } else {
-          current_stack.push({n_1, c_1 + 1, n_2, c_2, layer});
+          // go deeper now
+          st_node c_1_node = layers[layer + 1][node_1_children[c_1]];
+          st_node c_2_node = layers[layer + 1][node_2_children[c_2]];
+          size_t *c_1_children = child_buffer + c_1_node.cbuffer_offset;
+          size_t *c_2_children = child_buffer + c_2_node.cbuffer_offset;
+          if (c_1_node.label < c_2_node.label or
+              (layer + 1 < this->dim and
+               layers[layer + 2][c_1_children[0]].label <
+               layers[layer + 2][c_2_children[c_2_node.numchild - 1]].label)) {
+            current_stack.push({n_1, c_1 + 1, n_2, c_2, layer});
+          } else {
+            current_stack.push({node_1_children[c_1], 0,
+                                node_2_children[c_2], 0,
+                                layer + 1});
+          }
         }
       }
     }
