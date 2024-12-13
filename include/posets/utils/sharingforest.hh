@@ -343,6 +343,7 @@ private:
       // It's the first time we see this combination of nodes, so let's insert a draft
       // of it, still dirty, will be cleaned later
       if (c_s == 0 and c_t == 0) {
+        assert (node_s.label == node_t.label);
         if (layer < this->dim) {
           layers[layer].emplace_back(node_s.label, 0,
                                      addChildren(node_s.numchild + node_t.numchild));
@@ -373,25 +374,37 @@ private:
       } else if (layer < this->dim) { 
         size_t *node_s_children = child_buffer + node_s.cbuffer_offset;
         size_t *node_t_children = child_buffer + node_t.cbuffer_offset;
-        st_node &son_s = layers[layer + 1][node_s_children[c_s]];
-        st_node &son_t = layers[layer + 1][node_t_children[c_t]];
 
-        // Case 1: Either one tree is "done", or the child is "ahead"
+        // Case 1: One node is "done"
         // We add the existing node (including all its sons!) to the node
         // currently being constructed
-        if (c_s == node_s.numchild or son_t.label > son_s.label) {
+        if (c_s == node_s.numchild) {
           addSonIfNotSimulated(node_t_children[c_t], layer + 1, under_construction);
           if (c_t < node_t.numchild) current_stack.push({n_s, c_s, n_t, c_t + 1, layer});
         }
-        else if (c_t == node_t.numchild or son_s.label > son_t.label) {
+        else if (c_t == node_t.numchild) {
           addSonIfNotSimulated(node_s_children[c_s], layer + 1, under_construction);
           if (c_s < node_s.numchild) current_stack.push({n_s, c_s + 1, n_t, c_t, layer});
         }
-        // Case 2: The values of the sons match, so we need to continue the recursion
-        else {
-          assert (son_s.label == son_t.label);
-          if (c_s < node_s.numchild and c_t < node_t.numchild) current_stack.push({n_s, c_s + 1, n_t, c_t + 1, layer});
-          current_stack.push({node_s_children[c_s], 0, node_t_children[c_t], 0, layer + 1});
+        else 
+        {
+          st_node &son_s = layers[layer + 1][node_s_children[c_s]];
+          st_node &son_t = layers[layer + 1][node_t_children[c_t]];
+          // Case 2: One child is "ahead", We add just as when one list is done
+          if (son_t.label > son_s.label) {
+            addSonIfNotSimulated(node_t_children[c_t], layer + 1, under_construction);
+            if (c_t < node_t.numchild) current_stack.push({n_s, c_s, n_t, c_t + 1, layer});
+          }
+          else if (son_s.label > son_t.label) {
+            addSonIfNotSimulated(node_s_children[c_s], layer + 1, under_construction);
+            if (c_s < node_s.numchild) current_stack.push({n_s, c_s + 1, n_t, c_t, layer});
+          }
+          // Case 3: The values of the sons match, so we need to continue the recursion
+          else {
+            assert (son_s.label == son_t.label);
+            if (c_s < node_s.numchild and c_t < node_t.numchild) current_stack.push({n_s, c_s + 1, n_t, c_t + 1, layer});
+            current_stack.push({node_s_children[c_s], 0, node_t_children[c_t], 0, layer + 1});
+          }
         }
       }
     }
