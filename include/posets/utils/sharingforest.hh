@@ -271,6 +271,17 @@ private:
     node.numchild++;
   }
 
+  void addSonIfNotSimulated(size_t node, size_t sonLayer, st_node &father) {
+    size_t* siblings = child_buffer + father.cbuffer_offset;
+    for(size_t s = 0; s < father.numchild; s++) {
+      if (simulates(siblings[s], node, sonLayer)) {
+        return;
+      }
+    }
+    addSon(father, sonLayer, node);
+    return;
+  }
+
   size_t addNode(st_node &node, size_t destinationLayer) {
     auto existingNode = inverse[destinationLayer].find(node);
     if (existingNode == inverse[destinationLayer].end()) {
@@ -563,7 +574,84 @@ public:
   }
 
   size_t st_union(size_t root1, size_t root2) {
-    return node_union(root1, root2, 0);
+    // Stack contains node and child ID of S, node and child ID of T, layer
+    std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> current_stack;
+
+    st_node rootNode1 = layers[0][root1];
+    st_node rootNode2 = layers[0][root2];
+    assert(rootNode1.numchild > 0 and rootNode2.numchild > 0);
+
+    current_stack.push({root1, 0, root2, 0, 0});
+
+    while(not current_stack.empty())
+    {
+      auto [n_s, c_s, n_t, c_t, layer] = current_stack.top();
+      current_stack.pop();
+      assert(n_s < layers[layer].size());
+      st_node node_s = layers[layer][n_s];
+      assert(n_t < layers[layer].size());
+      st_node node_t = layers[layer][n_t];
+
+      // It's the first time we see this combination of nodes, so let's insert a draft
+      // of it, still dirty, will be cleaned later
+      if (c_s == 0 and c_t == 0) {
+        if (layer < this->dim) {
+          layers[layer].emplace_back(node_s.label, 0,
+                                     addChildren(node_s.numchild + node_t.numchild));
+        } else {
+          layers[layer].emplace_back(node_s.label, 0);
+        }
+      }
+
+      auto &under_construction = layers[layer].back();
+      // Base case: We are done with this combo and can clean up
+      if (c_s == node_s.numchild and c_t == node_t.numchild) {
+        if (layer == 0) {
+          // We skip this step, we clean the root after the loop, but we are done
+          break;
+        }
+        // The very first thing to do is to check whether our draft of node is
+        // not a repetition of something in the table already! 
+        auto &father = layers[layer - 1].back();
+        layers[layer].pop_back();
+        auto unionRes = add_if_not_simulated(under_construction,
+                                                 layer, father);
+        if (unionRes.has_value()) {
+          addSon(father, layer, unionRes.value());
+        }
+      // Recursive step: Either just add the son to the draft node and 
+      // continue with the next node, or continue down the tree if 
+      // necessary
+      } else if (layer < this->dim) { 
+        size_t *node_s_children = child_buffer + node_s.cbuffer_offset;
+        size_t *node_t_children = child_buffer + node_t.cbuffer_offset;
+        st_node &son_s = layers[layer + 1][node_s_children[c_s]];
+        st_node &son_t = layers[layer + 1][node_t_children[c_t]];
+
+        // Case 1: Either one tree is "done", or the child is "ahead"
+        // We add the existing node (including all its sons!) to the node
+        // currently being constructed
+        if (c_s == node_s.numchild or son_t.label > son_s.label) {
+          addSonIfNotSimulated(node_t_children[c_t], layer + 1, under_construction);
+          if (c_t < node_t.numchild) current_stack.push({n_s, c_s, n_t, c_t + 1, layer});
+        }
+        else if (c_t == node_t.numchild or son_s.label > son_t.label) {
+          addSonIfNotSimulated(node_s_children[c_s], layer + 1, under_construction);
+          if (c_s < node_s.numchild) current_stack.push({n_s, c_s + 1, n_t, c_t, layer});
+        }
+        // Case 2: The values of the sons match, so we need to continue the recursion
+        else {
+          assert (son_s.label == son_t.label);
+          if (c_s < node_s.numchild and c_t < node_t.numchild) current_stack.push({n_s, c_s + 1, n_t, c_t + 1, layer});
+          current_stack.push({node_s_children[c_s], 0, node_t_children[c_t], 0, layer + 1});
+        }
+      }
+    }
+    
+    // Clean up the root, we remove it for and re-add it, so it is checked whether an identical node exists
+    auto constructed_root = layers[0].back();
+    layers[0].pop_back();
+    return addNode(constructed_root, 0);
   }
 
   size_t st_intersect(size_t root1, size_t root2) {

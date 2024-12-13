@@ -72,15 +72,15 @@ int main(int argc, char const *argv[]) {
   // Test that all children are ordered descending
   assert(f.check_child_order());
 
-  // Test that the root of a (single-vector) ST is simulated by the
+  // Test that the root of a ST is simulated by the
   // root of the original ST
-  data = {{3, 4, 1}};
+  data = {{3, 4, 1}, {5, 2, 1}, {5, 1, 2}};
   auto idcs4 = f.add_vectors(std::move(vvtovv(data)));
   assert(f.check_simulation(idcs, idcs4));
 
-  // Test that the root of a second (single-vector) ST is not simulated
+  // Test that the root of a second ST is not simulated
   // by the root of the original ST
-  data = {{4, 9, 9}};
+  data = {{5, 2, 2}, {4, 9, 9}};
   auto idcs5 = f.add_vectors(std::move(vvtovv(data)));
   assert(not f.check_simulation(idcs, idcs5));
 
