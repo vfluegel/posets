@@ -129,54 +129,18 @@ private:
     return std::nullopt;
   }
 
-  bool simulates_node(st_node &n1, st_node &n2, size_t sonLayer) {
+  bool simulates(size_t n1idx, size_t n2idx, size_t layidx) {
+    st_node n1 = layers[layidx][n1idx];
+    st_node n2 = layers[layidx][n2idx];
     // If the node is in the last layer, we just check the labels
-    if(sonLayer == this->dim + 1) {
-      return n1.label >= n2.label;
-    }
-    size_t* n1_children = child_buffer + n1.cbuffer_offset;
-    size_t* n2_children = child_buffer + n2.cbuffer_offset;
-    if(n1.label < n2.label || 
-        layers[sonLayer][n1_children[0]].label <
-        layers[sonLayer][n2_children[n2.numchild - 1]].label) {
-      // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
-      // we already know it can't simulate
-      return false;
-    }
-
-    // Check if we can find a corresponding son of n1 for every son of n2
-    for (size_t s2 = 0; s2 < n2.numchild; s2++) {
-      bool found = false;
-      for (size_t s1 = 0; s1 < n1.numchild and
-                          layers[sonLayer][n2_children[s2]].label <=
-                          layers[sonLayer][n1_children[s1]].label; s1++) {
-        if(simulates(n1_children[s1], n2_children[s2], sonLayer)) {
-          found = true;
-          break;
-        }
-      }
-      // We checked all sons of n1 and there was no match, it can't simulate
-      if(!found) return false;
-    }
-
-    return true;
-  }
-
-  // Guillermo: this algorithm is my claim to fame!
-  // TODO: Make calls to simulates_node use indices instead of node references
-  // by inserting a draft node
-  bool simulates(size_t n1idx, size_t n2idx, size_t rootLayer) {
-    st_node n1 = layers[rootLayer][n1idx];
-    st_node n2 = layers[rootLayer][n2idx];
-    // If the node is in the last layer, we just check the labels
-    if (rootLayer == this->dim) {
+    if (layidx == this->dim) {
       return n1.label >= n2.label;
     }
     size_t* n1_children = child_buffer + n1.cbuffer_offset;
     size_t* n2_children = child_buffer + n2.cbuffer_offset;
     if (n1.label < n2.label || 
-        layers[rootLayer + 1][n1_children[0]].label <
-        layers[rootLayer + 1][n2_children[n2.numchild - 1]].label) {
+        layers[layidx + 1][n1_children[0]].label <
+        layers[layidx + 1][n2_children[n2.numchild - 1]].label) {
       // If the label of n1 is too small or its largest child is already smaller than n2's smallest,
       // we already know it can't simulate
       return false;
@@ -184,191 +148,82 @@ private:
 
     // Stack contains node and child ID of S, node and child ID of T, layer
     std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> current_stack;
-    current_stack.push({n1idx, 0, n2idx, 0, rootLayer});
+    current_stack.push({n1idx, 0, n2idx, 0, layidx});
  
     while (not current_stack.empty()) {
-      auto [n_1, c_1, n_2, c_2, layer] = current_stack.top();
+      auto [n1idx, c1, n2idx, c2, layidx] = current_stack.top();
       current_stack.pop();
-      st_node node_1 = layers[layer][n_1];
-      st_node node_2 = layers[layer][n_2];
+      n1 = layers[layidx][n1idx];
+      n2 = layers[layidx][n2idx];
+#ifndef NDEBUG
+      std::cout << "Dimension = " << this->dim << std::endl;
+      std::cout << "Comparing " << n1.label << " (" << layidx
+                << "." << n1idx << ",c=" << c1 << "/" << n1.numchild
+                << ") vs " << n2.label << " ("
+                << layidx << "." << n2idx << ",c=" << c2
+                << "/" << n2.numchild
+                << ")" << std::endl;
+#endif
 
       // This is our base case, no more things to check on the n2 side
       // We now claim success for n2 being simulated by n1 and update the top
       // of the stack so that when we go back up in the tree we have one less
       // branch to check on the n2 side
-      if (c_2 == node_2.numchild  || layer == this->dim) {
-        assert(c_2 == node_2.numchild);
-        simulating[layer][std::make_pair(n_1, n_2)] = true;
+      if (c2 == n2.numchild  || layidx == this->dim) {
+        assert(c2 == n2.numchild);
+        simulating[layidx][std::make_pair(n1idx, n2idx)] = true;
         if (not current_stack.empty()) {
-          auto [m_1, d_1, m_2, d_2, ell] = current_stack.top();
-          current_stack.push({m_1, 0, m_2 + 1, 0, ell});
+          auto [m1idx, d1, m2idx, d2, ell] = current_stack.top();
+          current_stack.pop();
+          current_stack.push({m1idx, 0, m2idx, d2 + 1, ell});
         }
 
       // Another base case: we've iterated through all the children on the
       // n1 side and failed to find a simulating one
-      } else if (c_1 == node_1.numchild) {
-        simulating[layer][std::make_pair(n_1, n_2)] = false;
+      } else if (c1 == n1.numchild) {
+        simulating[layidx][std::make_pair(n1idx, n2idx)] = false;
         return false;
 
       // The last case is that we have two valid children indices,
       // then we have to go deeper in the product tree (lest the cache saves
-      // us)
+      // us, or we find that the subtree will just certainly not satisfy
+      // simulation)
       } else {
-        size_t *node_1_children = child_buffer + node_1.cbuffer_offset;
-        size_t *node_2_children = child_buffer + node_2.cbuffer_offset;
-        auto node_pair = std::make_pair(node_1_children[c_1],
-                                        node_2_children[c_2]);
-        auto cached = simulating[layer + 1].find(node_pair);
+        n1_children = child_buffer + n1.cbuffer_offset;
+        n2_children = child_buffer + n2.cbuffer_offset;
+        auto node_pair = std::make_pair(n1_children[c1],
+                                        n2_children[c2]);
+        auto cached = simulating[layidx + 1].find(node_pair);
         // Did we get lucky with the cache? then push back an updated node
         // with less obligations or keep searching on the n1 side
-        if (cached != simulating[layer + 1].end()) {
+        if (cached != simulating[layidx + 1].end()) {
           if (cached->second)
-            current_stack.push({n_1, 0, n_2, c_2 + 1, layer});
+            current_stack.push({n1idx, 0, n2idx, c2 + 1, layidx});
           else 
-            current_stack.push({n_1, c_1 + 1, n_2, c_2, layer});
+            current_stack.push({n1idx, c1 + 1, n2idx, c2, layidx});
         } else {
-          // go deeper now
-          st_node c_1_node = layers[layer + 1][node_1_children[c_1]];
-          st_node c_2_node = layers[layer + 1][node_2_children[c_2]];
-          size_t *c_1_children = child_buffer + c_1_node.cbuffer_offset;
-          size_t *c_2_children = child_buffer + c_2_node.cbuffer_offset;
-          if (c_1_node.label < c_2_node.label or
-              (layer + 1 < this->dim and
-               layers[layer + 2][c_1_children[0]].label <
-               layers[layer + 2][c_2_children[c_2_node.numchild - 1]].label)) {
-            current_stack.push({n_1, c_1 + 1, n_2, c_2, layer});
+          st_node c1_node = layers[layidx + 1][n1_children[c1]];
+          st_node c2_node = layers[layidx + 1][n2_children[c2]];
+          size_t *c1_children = child_buffer + c1_node.cbuffer_offset;
+          size_t *c2_children = child_buffer + c2_node.cbuffer_offset;
+          // In some cases, we can eliminate the subtree altogether
+          if (c1_node.label < c2_node.label or
+              (layidx + 1 < this->dim and
+               layers[layidx + 2][c1_children[0]].label <
+               layers[layidx + 2][c2_children[c2_node.numchild - 1]].label)) {
+            current_stack.push({n1idx, c1 + 1, n2idx, c2, layidx});
+          // Alright, we have to go deeper now; and push back what we just
+          // popped
           } else {
-            current_stack.push({node_1_children[c_1], 0,
-                                node_2_children[c_2], 0,
-                                layer + 1});
+            current_stack.push({n1idx, c1, n2idx, c2, layidx});
+            current_stack.push({n1_children[c1], 0,
+                                n2_children[c2], 0,
+                                layidx + 1});
           }
         }
       }
     }
     return true;
-  }
-
-  /*
-   Simulation: check if n1 simulates n2
-  */
-  bool rec_simulates(size_t n1, size_t n2, size_t nodeLayer) {
-    // First check if we already computed this and return if we do
-    auto node_pair = std::make_pair(n1, n2);
-    auto cached = simulating[nodeLayer].find(node_pair);
-    if(cached != simulating[nodeLayer].end()) {
-      return cached->second;
-    }
-    
-    st_node& node1 = layers[nodeLayer][n1];
-    st_node& node2 = layers[nodeLayer][n2];
-    bool res = simulates_node(node1, node2, nodeLayer + 1);
-    
-    // Store the result in the cache and return
-    simulating[nodeLayer][node_pair] = res;
-    return res;
-  }
-
-  bool nonrec_simulates(size_t node1, size_t node2, size_t nodeLayer) {
-    // We first check if there is a result cached for the given nodes
-    auto input_pair = std::make_pair(node1, node2);
-    auto cached = simulating[nodeLayer].find(input_pair);
-    if(cached != simulating[nodeLayer].end()) {
-      return cached->second;
-    }
-    if (nodeLayer == this->dim) return layers[nodeLayer][node1].label >= layers[nodeLayer][node2].label;
-
-    // No cached result found - We continue the check
-    // Stack with Node and Child ID for n1 and n2 and layer
-    std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> to_check;
-    to_check.push({node1, 0, node2, 0, nodeLayer});
-
-    bool res{ false };
-    while (not to_check.empty()) {
-      auto [n1, c1, n2, c2, layer] = to_check.top();
-      to_check.pop();
-      std::cout << "Pop layer " << layer << ", " << n1 << " child " << c1 << ", " << n2 << " child " << c2 << std::endl;
-      st_node& node1 = layers[layer][n1];
-      st_node& node2 = layers[layer][n2];
-
-      // We reached the last child but no simulating path, so the result is false
-      if (c1 == node1.numchild) 
-      {
-        res = false;
-        auto parent_pair = std::make_pair(n1, n2);
-        simulating[layer][parent_pair] = res;
-        if (not to_check.empty()) {
-          auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
-          to_check.pop();
-          if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
-        }
-        
-      }
-      // We have checked all children without a contradiction, so the result is true 
-      else if (c2 == node2.numchild and res)
-      {
-        res = true;
-        auto parent_pair = std::make_pair(n1, n2);
-        simulating[layer][parent_pair] = res;
-        if (not to_check.empty()) {
-          auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
-          to_check.pop();
-          if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
-        }
-      }
-      // If the node is in the last layer, we just check the labels
-      else 
-      {  
-        size_t* n1_children = child_buffer + node1.cbuffer_offset;
-        size_t* n2_children = child_buffer + node2.cbuffer_offset;
-        st_node& child1 = layers[layer + 1][n1_children[c1]];
-        st_node& child2 = layers[layer + 1][n2_children[c2]];
-
-        // First check if we already computed this
-        auto node_pair = std::make_pair(n1_children[c1], n2_children[c2]);
-        auto cached = simulating[layer + 1].find(node_pair);
-        if(cached != simulating[layer + 1].end()) {
-          res = cached->second;
-          if (not res and c1 < node1.numchild) {
-            to_check.push({n1, c1 + 1, n2, c2, layer});
-          }
-          else if (not to_check.empty()) {
-            auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
-            to_check.pop();
-            if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
-          }
-        }
-        else if (layer == this->dim - 1)
-        {
-          res = child1.label >= child2.label;
-          simulating[layer + 1][node_pair] = res;
-          if (not res and c1 < node1.numchild) {
-            to_check.push({n1, c1 + 1, n2, c2, layer});
-          }
-          else if (not to_check.empty()) {
-            auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
-            to_check.pop();
-            if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
-          }
-        }
-        // If the values don't match we don't have to continue down the branch
-        else if (child1.label < child2.label) {
-          res = false;
-          simulating[layer + 1][node_pair] = res;
-          if(c1 < node1.numchild) {
-            to_check.push({n1, c1 + 1, n2, c2, layer});
-          }
-          else if (not to_check.empty()) {
-            auto [old1, oldc1, old2, oldc2, oldLayer] = to_check.top();
-            to_check.pop();
-            if (old2 < layers[oldLayer][old2].numchild) to_check.push({old1, 0, old2,  oldc2 + 1, oldLayer});
-          }
-        }
-        else {
-          to_check.push({n1_children[c1], 0, n2_children[c2], 0, layer + 1});
-        } 
-      }
-    }
-    return res;
   }
 
   void addSon(st_node &node, size_t sonLayer, size_t son) {
@@ -695,12 +550,16 @@ public:
     assert(layer <= this->dim);
     st_node& node = layers[layer][n];
     size_t* children = child_buffer + node.cbuffer_offset;
+#ifndef NDEBUG
     std::cout << std::string(layer, '\t') << layer << "." << n << " [" << static_cast<int>(node.label) << "] -> (" << (layer == this->dim? "" : "\n");
+#endif
     for (size_t i = 0; i < node.numchild; i++)
     {
       print_children(children[i], layer + 1);
     }
+#ifndef NDEBUG
     std::cout << (layer == this->dim? " " : std::string(layer, '\t')) << " )\n";
+#endif
   }
 
   size_t st_union(size_t root1, size_t root2) {
