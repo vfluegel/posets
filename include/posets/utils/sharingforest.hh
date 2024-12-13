@@ -620,16 +620,7 @@ public:
         auto intersectRes = add_if_not_simulated(under_construction,
                                                  layer, father);
         if (intersectRes.has_value()) {
-          // It can happen that we insert two children with same label, so we need to check
-          auto existingSon = hasSon(father, layer, under_construction.label);
-          if (existingSon.has_value()) {
-            size_t newSon = node_union(existingSon.value(), intersectRes.value(), layer);
-            size_t* newNode_children = child_buffer + father.cbuffer_offset;
-            newNode_children[existingSon.value()] = newSon;
-          } else {
-            addSonUnordered(father, layer, intersectRes.value());
-          }
-          
+          addSonUnordered(father, layer, intersectRes.value());
         }
       // Below we have the "recursive" step in which we put two elements into
       // the stack to remember what was the next child of the node at this
