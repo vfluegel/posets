@@ -765,7 +765,7 @@ public:
 
     size_t root_id = build_node(vectorIds, 0, elementVec);
 #ifndef NDEBUG
-    size_t maxlayer = -1;
+    size_t maxlayer = 0;
     size_t totlayer = 0;
     for (size_t i = 0; i < this->dim + 1; i++) {
       totlayer += this->layers[i].size();
