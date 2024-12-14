@@ -155,7 +155,7 @@ private:
       current_stack.pop();
       n1 = layers[layidx][n1idx];
       n2 = layers[layidx][n2idx];
-#ifndef NDEBUG
+/*#ifndef NDEBUG
       std::cout << "Dimension = " << this->dim << std::endl;
       std::cout << "Comparing " << n1.label << " (" << layidx
                 << "." << n1idx << ",c=" << c1 << "/" << n1.numchild
@@ -163,7 +163,7 @@ private:
                 << layidx << "." << n2idx << ",c=" << c2
                 << "/" << n2.numchild
                 << ")" << std::endl;
-#endif
+#endif*/
 
       // This is our base case, no more things to check on the n2 side
       // We now claim success for n2 being simulated by n1 and update the top
@@ -241,6 +241,7 @@ private:
   }
 
   void addSonUnordered(st_node &node, size_t sonLayer, size_t son) {
+    assert (sonLayer <= this->dim); // Can't add son after the last layer
     // Find the insertion point using binary search
     int left = 0;
     int right = node.numchild - 1;
@@ -248,7 +249,10 @@ private:
     size_t *children = child_buffer + node.cbuffer_offset;
     while (left <= right) {
       int mid = left + (right - left) / 2;
-      int midVal = layers[sonLayer][children[mid]].label;
+      assert (mid < static_cast<int>(node.numchild));
+      assert (mid >= 0);
+      assert (children[mid] < layers[sonLayer].size());
+      typename V::value_type midVal = layers[sonLayer][children[mid]].label;
 
       if (sonNode.label == midVal) {
         size_t newSon = node_union(son, children[mid], sonLayer);
