@@ -298,9 +298,7 @@ private:
     // Double the child buffer if it is full
     if (cbuffer_nxt + numChild >= cbuffer_size) {
       size_t *newBuffer = new size_t[cbuffer_size * 2];
-      for (size_t i = 0; i < cbuffer_size; i++) {
-        newBuffer[i] = child_buffer[i];
-      }
+      std::memcpy(newBuffer, child_buffer, cbuffer_size * sizeof(size_t));
       cbuffer_size *= 2;
       delete[] child_buffer;
       child_buffer = newBuffer;
