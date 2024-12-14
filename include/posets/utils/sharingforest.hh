@@ -256,6 +256,7 @@ private:
 
       if (sonNode.label == midVal) {
         size_t newSon = node_union(son, children[mid], sonLayer);
+        children = child_buffer + node.cbuffer_offset;
         children[mid] = newSon;
         return;
       } else if (midVal < sonNode.label) {
