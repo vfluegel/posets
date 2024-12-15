@@ -10,6 +10,7 @@
 
 #include "test_maker.hh"
 
+#include <posets/concepts.hh>
 #include <posets/downsets.hh>
 #include <posets/vectors.hh>
 
@@ -35,7 +36,89 @@ struct test_t : public generic_test<void> {
       return SetType (std::move (v));
     }
 
-    void operator() () {
+    void twodim() {
+      std::cout << "Create set" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {0, -1}));
+
+        vec_to_set (std::move (e1));
+      }
+      std::cout << "Create set" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {0, -1}));
+
+        vec_to_set (std::move (e1));
+      }
+      std::cout << "Create set" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {0, -1}));
+
+        vec_to_set (std::move (e1));
+      }
+      std::cout << "Create set" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 0}));
+
+        vec_to_set (std::move (e1));
+      }
+
+      std::cout << "Create set loop" << std::endl;
+      {
+        for (int i = 1; i <= 8; ++i) {
+          std::cout << "Inserting " << i << " (-1, 0)\n";
+          std::vector<VType> e1;
+          for (int j = 0; j < i; ++j)
+            e1.emplace_back (VType (il {-1, 0}));
+          e1.emplace_back (VType (il {0, -1}));
+          vec_to_set (std::move (e1));
+        }
+      }
+
+      std::cout << "Create set 5" << std::endl;
+      {
+        std::vector<VType> e1;
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 1}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {-1, 0}));
+        e1.emplace_back (VType (il {0, -1}));
+
+        vec_to_set (std::move (e1));
+      }
+    }
+
+    void threedim() {
       VType v1 (il {1, 2, 3});
       VType v2 (il {2, 5, 1});
       VType v3 (il {4, 1, 1});
@@ -201,6 +284,72 @@ struct test_t : public generic_test<void> {
       assert(other_set.contains(v4));
       assert(other_set.contains(v5));
 
+    }
+ 
+    void fivedim() {
+      std::cout << "Final tests" << std::endl;
+      {
+        auto tree = vec_to_set (vvtovv ({
+              {7, 0, 9, 9, 7},
+              {8, 0, 7, 7, 8},
+              {8, 0, 9, 9, 8},
+              {9, 0, 7, 7, 9}
+            }));
+        //assert (tree.size () == 4);
+        assert (tree.contains (VType (il {0, 0, 0, 0, 0})));
+        assert (tree.contains (VType (il {6, 0, 9, 9, 7})));
+        assert (tree.contains (VType (il {7, 0, 9, 9, 7})));
+      }
+
+
+      // Full set is so slow, this will never finish.
+      if constexpr (std::is_same<SetType, posets::downsets::full_set<VType>>::value)
+        return;
+
+
+      auto F1i = vec_to_set (vvtovv ({
+            {7, 0, 9, 9, 7},
+            {8, 0, 9, 9, 6},
+            {9, 0, 7, 7, 9}
+          }));
+      auto F = vec_to_set (vvtovv ({
+            {7, 0, 9, 9, 7},
+            {8, 0, 9, 9, 5},
+            {9, 0, 7, 7, 9}
+          }));
+
+      std::cout << "Preparing to intersect" << std::endl;
+      F.intersect_with (std::move (F1i));
+
+      assert (F.contains (VType (il {8, 0, 9 ,9, 4})));
+      assert (F.contains (VType (il {8, 0, 9 ,9, 5})));
+      assert (not F.contains (VType (il {8, 0, 9 ,9, 6})));
+      assert (F.contains (VType (il {7, 0, 9 ,9, 7})));
+      assert (not F.contains (VType (il {7, 0, 9 ,9, 8})));
+      assert (F.contains (VType (il {9, 0, 7 ,7, 9})));
+      assert (not F.contains (VType (il {9, 0, 7 ,7, 10})));
+      
+    }
+
+    void sixteendim() {
+      auto F = vec_to_set (vvtovv ({
+            {0, 7, 0, 0, 9, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 8, 0, 0, 8, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {-1, 8, -1, 0, 9, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {-1, 8, -1, 0, -1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {-1, 7, -1, 0, -1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {-1, 8, -1, 0, -1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {-1, 8, -1, 0, -1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {-1, 9, -1, 0, -1, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+          }));
+      assert (F.contains (VType (il {-1, 9, -1, 0, -1, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})));
+    }
+
+    void operator() () {
+      twodim();
+      threedim();
+      fivedim();
+      sixteendim();
     }
 
 };

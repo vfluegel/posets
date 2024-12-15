@@ -15,17 +15,23 @@ namespace posets::downsets {
   template <Vector V> class sharingtree_backed {
   private:
     size_t dim;
-
     size_t root{};
+    std::shared_ptr<utils::sharingforest<V>> forest;
+    std::vector<V> vector_set;
+    static std::map<size_t, std::shared_ptr<utils::sharingforest<V>>> forest_map;
+
+    void init_forest(size_t dimkey) {
+      auto res = sharingtree_backed::forest_map.find (dimkey);
+      if (res != sharingtree_backed::forest_map.end ()) {
+        this->forest = res->second;
+      } else {
+        this->forest = std::make_shared<utils::sharingforest<V>> (dimkey);
+        sharingtree_backed::forest_map.emplace(dimkey, this->forest);
+      }
+    }
 
   public:
-    typedef V value_type;
-    
-    std::vector<V> vector_set;
-    static std::unique_ptr<utils::sharingforest<V>> forest;
-    static utils::sharingforest<V>* sharingforest() {
-      return sharingtree_backed::forest.get();
-    }
+    typedef V value_type;   
 
     sharingtree_backed() = delete;
     sharingtree_backed (const sharingtree_backed&) = delete;
@@ -35,20 +41,16 @@ namespace posets::downsets {
 
     sharingtree_backed (std::vector<V>&& elements) 
     {
-      if(!sharingtree_backed::forest) {
-        sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(elements.begin()->size());
-      }
-      this->root = sharingforest()->add_vectors(std::move (elements));
-      this->vector_set = sharingforest()->get_all(this->root);
+      init_forest (elements.begin()->size());
+      this->root = this->forest->add_vectors(std::move (elements));
+      this->vector_set = this->forest->get_all(this->root);
     }
 
     sharingtree_backed (V&& v) 
     {
-      if(!sharingtree_backed::forest) {
-        sharingtree_backed::forest = std::make_unique<utils::sharingforest<V>>(v.size());
-      }
-      this->root = sharingforest()->add_vectors(std::array<V, 1> { std::move (v) });
-      this->vector_set = sharingforest()->get_all(this->root);
+      init_forest (v.size ());
+      this->root = this->forest->add_vectors(std::array<V, 1> { std::move (v) });
+      this->vector_set = this->forest->get_all(this->root);
     }
 
     auto size () const {
@@ -60,21 +62,21 @@ namespace posets::downsets {
     const auto  end () const   { return this->vector_set.end (); }
 
     bool contains (const V& v) const {
-        return sharingforest()->covers_vector(this->root, v);
+        return this->forest->covers_vector(this->root, v);
     }
 
     // Union in place
     void union_with (sharingtree_backed&& other) {
-        size_t newRoot = sharingforest()->st_union(this->root, other.root);
+        size_t newRoot = this->forest->st_union(this->root, other.root);
         this->root = newRoot;
-        this->vector_set = sharingforest()->get_all(this->root);
+        this->vector_set = this->forest->get_all(this->root);
     }
 
     // Intersection in place
     void intersect_with (const sharingtree_backed& other) {
-        size_t newRoot = sharingforest()->st_intersect(this->root, other.root);
+        size_t newRoot = this->forest->st_intersect(this->root, other.root);
         this->root = newRoot;
-        this->vector_set = sharingforest()->get_all(this->root);
+        this->vector_set = this->forest->get_all(this->root);
     }
 
     template <typename F>
@@ -89,8 +91,8 @@ namespace posets::downsets {
     }
   };
 
-template <Vector V>
-std::unique_ptr<utils::sharingforest<V>> sharingtree_backed<V>::forest = nullptr;
+  template <Vector V>
+  std::map<size_t, std::shared_ptr<utils::sharingforest<V>>> sharingtree_backed<V>::forest_map;
 
   template <Vector V>
   inline std::ostream& operator<<(std::ostream& os, const sharingtree_backed<V>& f) {
