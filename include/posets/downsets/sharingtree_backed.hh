@@ -18,12 +18,20 @@ namespace posets::downsets {
     size_t root{};
     std::shared_ptr<utils::sharingforest<V>> forest;
     std::vector<V> vector_set;
-    static std::map<size_t, std::shared_ptr<utils::sharingforest<V>>> forest_map;
+    static std::map<size_t, std::weak_ptr<utils::sharingforest<V>>> forest_map;
 
     void init_forest(size_t dimkey) {
       auto res = sharingtree_backed::forest_map.find (dimkey);
       if (res != sharingtree_backed::forest_map.end ()) {
-        this->forest = res->second;
+        // two cases now, either the pointer is live and we take a lock on it
+        // or it's dead, and we need to update it
+        std::shared_ptr<utils::sharingforest<V>> live = res->second.lock();
+        if (live) {
+          this->forest = live;
+        } else {
+          this->forest = std::make_shared<utils::sharingforest<V>> (dimkey);
+          res->second = this->forest;
+        }
       } else {
         this->forest = std::make_shared<utils::sharingforest<V>> (dimkey);
         sharingtree_backed::forest_map.emplace(dimkey, this->forest);
@@ -92,7 +100,7 @@ namespace posets::downsets {
   };
 
   template <Vector V>
-  std::map<size_t, std::shared_ptr<utils::sharingforest<V>>> sharingtree_backed<V>::forest_map;
+  std::map<size_t, std::weak_ptr<utils::sharingforest<V>>> sharingtree_backed<V>::forest_map;
 
   template <Vector V>
   inline std::ostream& operator<<(std::ostream& os, const sharingtree_backed<V>& f) {
