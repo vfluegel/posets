@@ -5,6 +5,8 @@ tests_exe = executable ('tests', 'tests.cc',
 kdtests_exe = executable ('kdtests', 'kdtests.cc',
                           dependencies : [posets_dep ])
 
+sttests_exe = executable ('sttests', 'sttests.cc',
+                          dependencies : [posets_dep ])
 
 simdbm_exe = executable ('simd-bm', 'simd-bm.cc',
                          dependencies : [posets_dep ])
@@ -21,7 +23,9 @@ test('antichains/vectors kdtree-all', tests_exe, args : ['kdtree_backed', 'all']
 test('antichains/vectors kdtree-vec', tests_exe, args : ['kdtree_backed', 'vector_backed<char>'], suite : 'kdtree-nosimd')
 test('antichains/vectors kdtree-arr', tests_exe, args : ['kdtree_backed', 'array_backed_fixed<char>'], suite : 'kdtree-nosimd')
 test('antichains/vectors kdtree-arr-sum', tests_exe, args : ['kdtree_backed', 'array_backed_sum_fixed<char>'], suite : 'kdtree-nosimd')
+
 test('antichains/vectors kdtests', kdtests_exe, suite : 'kdtree-nosimd')
+test('antichains/vectors sttests', sttests_exe)
 
 test('antichains/vectors vec-or-tree-all', tests_exe, args : ['vector_or_kdtree_backed', 'all'], suite : 'vector-or-kdtree')
 test('antichains/vectors vec-or-tree-vec', tests_exe, args : ['vector_or_kdtree_backed', 'vector_backed<char>'], suite : 'vector-or-kdtree-nosimd')
