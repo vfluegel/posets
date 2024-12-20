@@ -530,7 +530,6 @@ namespace posets::utils {
       sharingforest () = default;
 
       sharingforest (size_t dim) {
-        assert (dim >= 2);
         this->init (dim);
       }
 
@@ -568,21 +567,16 @@ namespace posets::utils {
             temp.push_back (parent.label);
 
           // base case: reached the bottom layer
-          size_t* children = child_buffer + parent.cbuffer_offset;
-          if (lay == this->dim - 1) {
+          if (lay == this->dim) {
             assert (child == 0);
-            for (size_t i = 0; i < parent.numchild; i++) {
-              auto bottom_node = layers[lay + 1][children[i]];
-              temp.push_back (bottom_node.label);
-              std::vector<typename V::value_type> cpy {temp};
-              res.push_back (V (std::move (cpy)));
-              temp.pop_back ();
-            }
-            temp.pop_back ();  // done with this parent
+            std::vector<typename V::value_type> cpy {temp};
+            res.push_back (V (std::move (cpy)));
+            temp.pop_back ();  // done with this node
           }
           else {  // recursive case
             // Either we're done with this node and we just mark it as visited or
             // we need to keep it and we add it's next son
+            size_t* children = child_buffer + parent.cbuffer_offset;
             if (child < parent.numchild) {
               to_visit.emplace (lay, node, child + 1);
               to_visit.emplace (lay + 1, children[child], 0);
@@ -720,7 +714,7 @@ namespace posets::utils {
 
         while (not to_visit.empty ()) {
           const auto [lay, node, child] = to_visit.top ();
-          assert (lay < this->dim);
+          assert (lay <= this->dim);
           assert (node < layers[lay].size ());
           to_visit.pop ();
           // if this node has been visited, it means this node is useless
@@ -737,20 +731,18 @@ namespace posets::utils {
             visited[lay][node] = true;
           }
           const auto parent = layers[lay][node];
-          assert (child < parent.numchild);
-          size_t* children = child_buffer + parent.cbuffer_offset;
 
           // base case: reached the bottom layer
-          if (lay == this->dim - 1) {
+          if (lay == this->dim) {
             assert (child == 0);
-            // it is sufficient to check the first child
-            auto bottom_node = layers[lay + 1][children[0]];
-            if (covered[lay] <= bottom_node.label)
+            if (covered[lay - 1] <= parent.label)
               return true;
           }
           else {  // recursive case
             // Either we're done with this node and we just mark it as visited or
             // we need to keep it and we add it's next son
+            assert (child < parent.numchild);
+            size_t* children = child_buffer + parent.cbuffer_offset;
             const size_t c = child;
             auto child_node = layers[lay + 1][children[c]];
             // early exit if the largest child is smaller
@@ -786,10 +778,10 @@ namespace posets::utils {
           if (maxlayer < this->layers[i].size ())
             maxlayer = this->layers[i].size ();
         }
-        std::cout << "[Forest stats] Max layer size=" << maxlayer
+        std::cout << "[" << this->dim << " Forest stats] Max layer size=" << maxlayer
                   << " total layers' size=" << totlayer << " (bytes per el=" << sizeof (st_node)
                   << ")" << '\n';
-        std::cout << "[Forest stats] Child buff size=" << this->cbuffer_size
+        std::cout << "[" << this->dim << " Forest stats] Child buff size=" << this->cbuffer_size
                   << " (bytes per el=" << sizeof (size_t) << ")\n";
 #endif
         return root_id;
