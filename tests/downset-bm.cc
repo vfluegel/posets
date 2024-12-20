@@ -293,7 +293,7 @@ using set_types = template_type_list<
   posets::downsets::sharingtree_backed
   >;
 
-void usage (const char* progname) {
+void usage (const char* progname, bool error = true) {
   std::cout << "usage: " << progname << " [-v -v -v...] [--params PARAMS] [--seed N] SETTYPE VECTYPE\n";
 
   std::cout << "List of parameters:\n";
@@ -312,7 +312,7 @@ void usage (const char* progname) {
     std::cout << "  - " << s.substr (start, s.find_first_of ('>') - start + 1) << '\n';
   }
 
-  exit (0);
+  exit (error ? 1 : 0);
 }
 
 namespace {
@@ -320,6 +320,7 @@ namespace {
       std::to_array<struct option> ({{"seed", required_argument, nullptr, 's'},
                                      {"verbose", no_argument, nullptr, 'v'},
                                      {"params", required_argument, nullptr, 'p'},
+                                     {"help", no_argument, nullptr, 'h'},
                                      {nullptr, 0, nullptr, 0}});
 }
 
@@ -329,7 +330,7 @@ int main (int argc, char* argv[]) {
   register_maker<false> ((vector_types*) nullptr, (set_types*) nullptr);
 
   while (true) {
-    const int c = getopt_long (argc, argv, "s:vp:", LONG_OPTIONS.data (), nullptr);
+    const int c = getopt_long (argc, argv, "hs:vp:", LONG_OPTIONS.data (), nullptr);
     if (c == -1)
       break;
     switch (c) {
@@ -360,6 +361,9 @@ int main (int argc, char* argv[]) {
           params[p] = std::stoul (arg);
           optarg = (comma != nullptr) ? comma + 1 : nullptr;
         }
+        break;
+      case 'h':
+        usage (prog, false);
         break;
       default:
         usage (prog);
