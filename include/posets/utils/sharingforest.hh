@@ -731,11 +731,9 @@ namespace posets::utils {
           const auto [lay, node, child] = to_visit.top ();
 
           auto is_visited = visited[lay].find (std::make_pair (node, child));
-          if (is_visited == visited[lay].end ()) {
+          if (is_visited == visited[lay].end ())
             continue;
-          } else {
-            visited[lay][std::make_pair (node, child)] = true;
-          }
+          visited[lay][std::make_pair (node, child)] = true;
 
           assert (lay < this->dim);
           assert (node < layers[lay].size ());
