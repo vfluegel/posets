@@ -165,15 +165,6 @@ namespace posets::utils {
           current_stack.pop ();
           n1 = layers[layidx][n1idx];
           n2 = layers[layidx][n2idx];
-          /*#ifndef NDEBUG
-                std::cout << "Dimension = " << this->dim << std::endl;
-                std::cout << "Comparing " << n1.label << " (" << layidx
-                          << "." << n1idx << ",c=" << c1 << "/" << n1.numchild
-                          << ") vs " << n2.label << " ("
-                          << layidx << "." << n2idx << ",c=" << c2
-                          << "/" << n2.numchild
-                          << ")" << std::endl;
-          #endif*/
 
           // This is our base case, no more things to check on the n2 side
           // We now claim success for n2 being simulated by n1 and update the top
@@ -713,9 +704,9 @@ namespace posets::utils {
         // Stack with tuples (layer, node id, child id)
         std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
         // Visited cache
-        std::vector<std::unordered_map<std::pair<size_t, size_t>, bool,
-                                       boost::hash<std::pair<size_t, size_t>>>>
-            visited (this->dim + 1);
+        std::vector<std::unordered_map<size_t, bool>> visited;
+        for (size_t i = 0; i < this->dim + 1; i++)
+          visited.emplace_back ();
 
         // Add all roots at dimension 0 such that their labels cover the first
         // component of the given vector
@@ -729,15 +720,23 @@ namespace posets::utils {
 
         while (not to_visit.empty ()) {
           const auto [lay, node, child] = to_visit.top ();
-
-          auto is_visited = visited[lay].find (std::make_pair (node, child));
-          if (is_visited == visited[lay].end ())
-            continue;
-          visited[lay][std::make_pair (node, child)] = true;
-
           assert (lay < this->dim);
           assert (node < layers[lay].size ());
           to_visit.pop ();
+          // if this node has been visited, it means this node is useless
+          // NOTE: this works only because we are doing a DFS and not a BFS
+          if (child == 0) {
+            auto res = visited[lay].find (node);
+            if (res != visited[lay].end ()) {
+#ifndef NDEBUG
+              std::cout << "Avoided node in covers check, DFS cache helps."
+                        << std::endl;
+#endif
+              continue;
+            }
+            // no early exit? then mark the node as visited and keep going
+            visited[lay][node] = true;
+          }
           const auto parent = layers[lay][node];
           assert (child < parent.numchild);
           size_t* children = child_buffer + parent.cbuffer_offset;
