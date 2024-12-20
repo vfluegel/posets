@@ -49,7 +49,7 @@ namespace posets::vectors {
         has_bleq = true;
       }
 
-      inline bool geq () {
+      bool geq () {
         if (has_bgeq)
           return bgeq;
         assert (has_bleq);
@@ -70,7 +70,7 @@ namespace posets::vectors {
         return bgeq;
       }
 
-      inline bool leq () {
+      bool leq () {
         if (has_bleq)
           return bleq;
         assert (has_bgeq);

@@ -100,7 +100,7 @@ namespace posets::vectors {
   static_assert (Vector<vector_backed<int>>);
   static_assert (Vector<vector_backed_sum<int>>);
 
-  static_assert (Vector<X_and_bitset<vector_backed<int>, 128>>);
+  static_assert (Vector<x_and_bitset<vector_backed<int>, 128>>);
 }
 
 namespace std {

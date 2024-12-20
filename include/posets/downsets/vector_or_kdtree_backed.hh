@@ -10,7 +10,7 @@
 #include <posets/downsets/vector_backed.hh>
 
 // FIXME? the theory says it should be (exp (dim) < m)
-#define KD_THRESH(M, D) (D * 2 < M)
+#define KD_THRESH(M, D) ((D) * 2 < (M))
 
 #ifdef AC_DATA
 # define data_do(acts...) \
@@ -39,18 +39,14 @@ namespace posets::downsets {
       friend std::ostream& operator<< (std::ostream& os, const vector_or_kdtree_backed<V2>& f);
 
       size_t dim () {
-        if (this->vector != nullptr)
-          return this->vector->vector_set.size ();
-        else {
-          assert (this->kdtree != nullptr);
-          return this->kdtree->tree.vector_set.size ();
-        }
+        // TODO  This is a terrible name for this function.
+        return get_backing_vector ().size ();
       }
 
       void boolop_with (vector_or_kdtree_backed&& other, bool inter = false) {
         // four cases: 1. both are vectors, 2/3. one is a vector,
         // 4. both are kdtrees
-        if (this->kdtree == nullptr && other.kdtree == nullptr) {
+        if (this->kdtree == nullptr and other.kdtree == nullptr) {
           // case 1. just work with vectors
           assert (other.vector != nullptr);
           assert (this->vector != nullptr);
@@ -59,24 +55,24 @@ namespace posets::downsets {
           else
             this->vector->union_with (std::move (*(other.vector)));
         }
-        else if (this->kdtree == nullptr && other.kdtree != nullptr) {
+        else if (this->kdtree == nullptr and other.kdtree != nullptr) {
           // case 2. reinterpret kdtree as vector
           assert (this->vector != nullptr);
           assert (other.vector == nullptr);
           // this costs linear time already: reinterpret the kdtree as a
           // vector
-          vector_backed<V> B = vector_backed<V> (std::move (other.kdtree->tree.vector_set));
+          vector_backed<V> b = vector_backed<V> (std::move (other.kdtree->get_backing_vector ()));
           if (inter)
-            this->vector->intersect_with (std::move (B));
+            this->vector->intersect_with (std::move (b));
           else
-            this->vector->union_with (std::move (B));
+            this->vector->union_with (std::move (b));
         }
-        else if (other.kdtree == nullptr && this->kdtree != nullptr) {
+        else if (other.kdtree == nullptr and this->kdtree != nullptr) {
           // case 3. again reinterpret kdtree as vector
           assert (other.vector != nullptr);
           assert (this->vector == nullptr);
           this->vector =
-              std::make_unique<vector_backed<V>> (std::move (this->kdtree->tree.vector_set));
+              std::make_unique<vector_backed<V>> (std::move (this->kdtree->get_backing_vector ()));
           this->kdtree = nullptr;
           if (inter)
             this->vector->intersect_with (std::move (*(other.vector)));
@@ -87,7 +83,8 @@ namespace posets::downsets {
           // case 4. we have two kdtrees, though we still
           // need to check if reinterpreting them as vectors
           // is easier
-          size_t m, n;
+          size_t m;
+          size_t n;
           if (this->size () > other.size ()) {
             m = other.size ();
             n = this->size ();
@@ -96,46 +93,48 @@ namespace posets::downsets {
             m = this->size ();
             n = this->size ();
           }
-          if (n < exp (m)) {
+          if (static_cast<double> (n) < exp (static_cast<double> (m))) {
             if (inter)
               this->kdtree->intersect_with (std::move (*(other.kdtree)));
             else
               this->kdtree->union_with (std::move (*(other.kdtree)));
           }
           else {
-            this->vector =
-                std::make_unique<vector_backed<V>> (std::move (this->kdtree->tree.vector_set));
+            this->vector = std::make_unique<vector_backed<V>> (
+                std::move (this->kdtree->get_backing_vector ()));
             this->kdtree = nullptr;
-            vector_backed<V> B = vector_backed<V> (std::move (other.kdtree->tree.vector_set));
+            vector_backed<V> b =
+                vector_backed<V> (std::move (other.kdtree->get_backing_vector ()));
             if (inter)
-              this->vector->intersect_with (std::move (B));
+              this->vector->intersect_with (std::move (b));
             else
-              this->vector->union_with (std::move (B));
+              this->vector->union_with (std::move (b));
           }
         }
 
         // one last thing to deal with: it could be that we ended up with a
         // list but it satisfies the condition for it to be upgraded to a
         // kd-tree
-        size_t m = this->size ();
-        size_t dim = this->dim ();
+        const size_t m = this->size ();
+        const size_t dim = this->dim ();
         data_do (std::cout << "|VEKD: downset_size=" << dim << "," << m << "|" << std::endl);
-        if (this->kdtree == nullptr && KD_THRESH (m, dim)) {
-          this->kdtree = std::make_unique<kdtree_backed<V>> (std::move (this->vector->vector_set));
+        if (this->kdtree == nullptr and KD_THRESH (m, dim)) {
+          this->kdtree =
+              std::make_unique<kdtree_backed<V>> (std::move (this->vector->get_backing_vector ()));
           this->vector = nullptr;
           data_do (std::cout << "VEKD: upgraded to kd-tree downset" << std::endl);
         }
       }
 
     public:
-      typedef V value_type;
+      using value_type = V;
 
       vector_or_kdtree_backed () = delete;
 
       vector_or_kdtree_backed (std::vector<V>&& elements) noexcept {
-        assert (elements.size () > 0);
-        size_t m = elements.size ();
-        size_t dim = elements[0].size ();
+        assert (not elements.empty ());
+        const size_t m = elements.size ();
+        const size_t dim = elements[0].size ();
         data_do (std::cout << "|VEKD: downset_size=" << dim << "," << m << "|" << std::endl);
 
         // NOTE: we are checking the size BEFORE we actually create the
@@ -159,8 +158,7 @@ namespace posets::downsets {
 
       template <typename F>
       auto apply (const F& lambda) const {
-        const std::vector<V>& backing_vector =
-            this->kdtree != nullptr ? this->kdtree->tree.vector_set : this->vector->vector_set;
+        const std::vector<V>& backing_vector = get_backing_vector ();
         std::vector<V> ss;
         ss.reserve (backing_vector.size ());
 
@@ -175,11 +173,10 @@ namespace posets::downsets {
       vector_or_kdtree_backed& operator= (const vector_or_kdtree_backed&) = delete;
       vector_or_kdtree_backed& operator= (vector_or_kdtree_backed&&) = default;
 
-      bool contains (const V& v) const {
+      [[nodiscard]] bool contains (const V& v) const {
         if (this->kdtree != nullptr)
           return this->kdtree->contains (v);
-        else
-          return this->vector->contains (v);
+        return this->vector->contains (v);
       }
 
       /* Union in place
@@ -196,18 +193,28 @@ namespace posets::downsets {
         boolop_with (std::move (other), true);  // it is intersection
       }
 
-      auto size () const {
+      [[nodiscard]] auto size () const {
         return this->kdtree != nullptr ? this->kdtree->size () : this->vector->size ();
       }
 
-      auto begin () {
+      [[nodiscard]] auto& get_backing_vector () {
+        return vector ? vector->get_backing_vector () : kdtree->get_backing_vector ();
+      }
+
+      [[nodiscard]] const auto& get_backing_vector () const {
+        return vector ? vector->get_backing_vector () : kdtree->get_backing_vector ();
+      }
+
+      [[nodiscard]] auto begin () {
         return this->kdtree != nullptr ? this->kdtree->begin () : this->vector->begin ();
       }
-      const auto begin () const {
+      [[nodiscard]] auto begin () const {
         return this->kdtree != nullptr ? this->kdtree->begin () : this->vector->begin ();
       }
-      auto end () { return this->kdtree != nullptr ? this->kdtree->end () : this->vector->end (); }
-      const auto end () const {
+      [[nodiscard]] auto end () {
+        return this->kdtree != nullptr ? this->kdtree->end () : this->vector->end ();
+      }
+      [[nodiscard]] auto end () const {
         return this->kdtree != nullptr ? this->kdtree->end () : this->vector->end ();
       }
   };

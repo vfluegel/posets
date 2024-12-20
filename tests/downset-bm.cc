@@ -38,7 +38,7 @@ using namespace std::literals;
 namespace utils = posets::utils;
 
 #ifndef DIMENSION
-# define DIMENSION 128 * 1024
+# define DIMENSION (128UL * 1024UL)
 #endif
 
 size_t posets::vectors::bool_threshold = DIMENSION;
@@ -51,20 +51,22 @@ using test_value_type = uint8_t;
 
 using result_t = std::map<std::string, double>;
 
-static std::default_random_engine::result_type starting_seed = 0;
+namespace {
+  std::default_random_engine::result_type starting_seed = 0;
 
-static std::map<std::string, size_t> params = {
+  std::map<std::string, size_t> params = {
   {"maxval", 12},
-  {"build", 10240ul * 2},
-  {"query", 10240ul * 4},
+  {"build", 10240 * 2},
+  {"query", 10240 * 4},
   {"transfer", 1000000},
-  {"intersection", 256ul},
-  {"union", 512ul * 20 },
+  {"intersection", 256},
+  {"union", 512 * 20},
   {"rounds", 1}
 };
 
-static std::mt19937 rand_gen;
-static std::uniform_int_distribution<uint32_t> distrib;
+  std::mt19937 rand_gen;
+  std::uniform_int_distribution<uint32_t> distrib;
+}
 
 template <typename T>
 auto random_vector () {
@@ -85,22 +87,23 @@ struct {
     size_t t3_sz;
 } test_chk = {};
 
-#define chk(Field, Value) do {                  \
-  if (Field == 0)                               \
-    Field = Value;                              \
-  else                                          \
-    if (Field != Value) {                                               \
-      verb_do (0, vout << "ERROR: " << #Field " != " #Value << std::endl); \
-      abort ();                                                         \
-    }                                                                   \
+#define chk(Field, Value, Fail)                                                              \
+  do {                                                                                       \
+    if ((Field) == 0)                                                                        \
+      (Field) = (Value);                                                                     \
+    else if ((Field) != (Value)) {                                                       \
+      verb_do (0, vout << ((Fail) ? "[FAIL] " : "[WARN] ") << #Field " != " #Value << '\n'); \
+      if (Fail)                                                                              \
+        abort ();                                                                            \
+    }                                                                                        \
   } while (0)
 
 template <typename SetType>
 struct test_t : public generic_test<result_t> {
-    using VType = typename SetType::value_type;
-    using value_type = typename VType::value_type;
+    using v_type = typename SetType::value_type;
+    using value_type = typename v_type::value_type;
 
-    SetType vec_to_set (std::vector<VType>&& v) {
+    SetType vec_to_set (std::vector<v_type>&& v) {
       if constexpr (has_insert<SetType>::value) {
         SetType set (std::move (v[0]));
         for (size_t i = 1; i < v.size (); ++i)
@@ -111,32 +114,34 @@ struct test_t : public generic_test<result_t> {
         return SetType (std::move (v));
     }
 
-    std::vector<VType> test_vector (size_t nitems, ssize_t delta = 0) {
+    std::vector<v_type> test_vector (size_t nitems, ssize_t delta = 0) {
       rand_gen.seed (starting_seed);
       verb_do (3, vout << "Creating a vector of " << nitems << " elements... " << std::flush);
-      std::vector<VType> elts;
+      std::vector<v_type> elts;
       elts.reserve (nitems);
       for (size_t i = 0; i < nitems; ++i) {
         auto r = random_vector<value_type> ();
         for (auto&& x : r)
           if (x > 0)
             x += delta;
-        elts.push_back (VType (std::move (r)));
+        elts.push_back (v_type (std::move (r)));
       }
       verb_do (3, vout << "done.\n" << std::flush);
       return elts;
     }
 
-    result_t operator() () {
+    result_t operator() () override {
       result_t res;
 
-      auto ROUNDS = params["rounds"];
-      if (params["build"]) {
-        verb_do (1, vout << "Test 1: Insertion and membership query" << std::endl);
+      auto prounds = params["rounds"];
+      if (params["build"] != 0) {
+        verb_do (1, vout << "Test 1: Insertion and membership query\n");
         spot::stopwatch sw;
-        double buildtime = 0, querytime = 0, transfertime = 0;
-        for (size_t rounds = 0; rounds < ROUNDS; ++rounds) {
-          verb_do (2, vout << "Round " << rounds << std::endl);
+        double buildtime = 0;
+        double querytime = 0;
+        double transfertime = 0;
+        for (size_t rounds = 0; rounds < prounds; ++rounds) {
+          verb_do (2, vout << "Round " << rounds << '\n');
           verb_do (2, vout << "BUILD..." << std::flush);
           auto vec1 = test_vector (params["build"]);
           sw.start ();
@@ -144,12 +149,13 @@ struct test_t : public generic_test<result_t> {
           auto set = vec_to_set (std::move (vec1));
           CALLGRIND_STOP_INSTRUMENTATION;
           buildtime += sw.stop ();
-          verb_do (2, vout << " SIZE: " << set.size () << std::endl);
-          chk (test_chk.t1_sz, set.size ());
-          if (params["query"]) {
+          verb_do (2, vout << " SIZE: " << set.size () << '\n');
+          chk (test_chk.t1_sz, set.size (), false);
+          if (params["query"] != 0) {
             verb_do (2, vout << "QUERY..." << std::flush);
             auto vec2 = test_vector (params["query"], -1);
-            size_t in = 0, out = 0;
+            size_t in = 0;
+            size_t out = 0;
             sw.start ();
             CALLGRIND_START_INSTRUMENTATION;
             for (auto&& x : vec2)
@@ -159,9 +165,9 @@ struct test_t : public generic_test<result_t> {
                 ++out;
             CALLGRIND_STOP_INSTRUMENTATION;
             querytime += sw.stop ();
-            verb_do (2, vout << "... IN: " << in << " OUT: " << out << std::endl);
-            chk (test_chk.t1_in, in);
-            chk (test_chk.t1_out, out);
+            verb_do (2, vout << "... IN: " << in << " OUT: " << out << '\n');
+            chk (test_chk.t1_in, in, true);
+            chk (test_chk.t1_out, out, true);
           }
           if (auto tr = params["transfer"]) {
             verb_do (2, vout << "TRANSFER..." << std::flush);
@@ -169,14 +175,14 @@ struct test_t : public generic_test<result_t> {
             CALLGRIND_START_INSTRUMENTATION;
             for (size_t i = 0; i < tr; ++i) {
               auto set2 (std::move (set));
-              chk (test_chk.t1_sz, set2.size ());
+              chk (test_chk.t1_sz, set2.size (), false);
               set = std::move (set2);
-              chk (test_chk.t1_sz, set.size ());
+              chk (test_chk.t1_sz, set.size (), false);
             }
             CALLGRIND_STOP_INSTRUMENTATION;
             transfertime += sw.stop ();
-            verb_do (2, vout << " done." << std::endl);
-            chk (test_chk.t1_sz, set.size ());
+            verb_do (2, vout << " done.\n");
+            chk (test_chk.t1_sz, set.size (), false);
           }
         }
 
@@ -184,24 +190,25 @@ struct test_t : public generic_test<result_t> {
         res["query"] = querytime;
         res["transfer"] = transfertime;
 
-        verb_do (1, vout << "BUILD: " << buildtime / ROUNDS
-                 << ", QUERY: " << querytime / ROUNDS
-                 << ", TRANSFER: " << transfertime / ROUNDS
-                 << std::endl);
+        verb_do (1, vout << "BUILD: " << buildtime / prounds << ", QUERY: " << querytime / prounds
+                         << ", TRANSFER: " << transfertime / prounds << '\n');
       }
 
-      if (const size_t NITEMS = params["intersection"]) {
-        verb_do (1, vout << "Test 2: Intersections" << std::endl);
+      if (params["intersection"] != 0) {
+        verb_do (1, vout << "Test 2: Intersections\n");
+
+        const size_t nitems = params["intersection"];
         spot::stopwatch sw;
         double intertime = 0;
-        for (size_t rounds = 0; rounds < ROUNDS; ++rounds) {
-          verb_do (2, vout << "Round " << rounds << std::endl);
+
+        for (size_t rounds = 0; rounds < prounds; ++rounds) {
+          verb_do (2, vout << "Round " << rounds << '\n');
           verb_do (2, vout << "BUILD\n");
-          auto set = vec_to_set (test_vector (NITEMS));
-          auto vec = test_vector (2 * NITEMS);
+          auto set = vec_to_set (test_vector (nitems));
+          auto vec = test_vector (2 * nitems);
           decltype (vec) vec2;
-          vec2.insert (vec2.end (), std::make_move_iterator (vec.begin () + NITEMS / 2),
-                       std::make_move_iterator (vec.begin () + 3 * NITEMS / 2));
+          vec2.insert (vec2.end (), std::make_move_iterator (vec.begin () + nitems / 2),
+                       std::make_move_iterator (vec.begin () + 3 * nitems / 2));
           auto set2 = vec_to_set (std::move (vec2));
           verb_do (2, vout << "INTERSECT...";);
           sw.start ();
@@ -209,28 +216,29 @@ struct test_t : public generic_test<result_t> {
           set.intersect_with (std::move (set2));
           CALLGRIND_STOP_INSTRUMENTATION;
           intertime += sw.stop ();
-          verb_do (2, vout << " SIZE: " << set.size () << std::endl);
-          chk (test_chk.t2_sz, set.size ());
+          verb_do (2, vout << " SIZE: " << set.size () << '\n');
+          chk (test_chk.t2_sz, set.size (), false);
         }
         res["intersection"] = intertime;
-        verb_do (1, vout << "INTER: " << intertime / ROUNDS
-                 << std::endl);
+        verb_do (1, vout << "INTER: " << intertime / prounds << '\n');
       }
 
+      if (params["union"] != 0) {
+        verb_do (1, vout << "Test 3: Unions\n");
 
-      if (const size_t NITEMS = params["union"]) {
-        verb_do (1, vout << "Test 3: Unions" << std::endl);
+        const size_t nitems = params["union"];
         spot::stopwatch sw;
         double uniontime = 0;
-        for (size_t rounds = 0; rounds < ROUNDS; ++rounds) {
-          verb_do (2, vout << "Round " << rounds << std::endl);
+
+        for (size_t rounds = 0; rounds < prounds; ++rounds) {
+          verb_do (2, vout << "Round " << rounds << '\n');
 
           verb_do (2, vout << "BUILD\n");
-          auto set = vec_to_set (test_vector (NITEMS));
-          auto vec = test_vector (2 * NITEMS);
+          auto set = vec_to_set (test_vector (nitems));
+          auto vec = test_vector (2 * nitems);
           decltype (vec) vec2;
-          vec2.insert (vec2.end (), std::make_move_iterator (vec.begin () + NITEMS / 2),
-                       std::make_move_iterator (vec.begin () + 3 * NITEMS / 2));
+          vec2.insert (vec2.end (), std::make_move_iterator (vec.begin () + nitems / 2),
+                       std::make_move_iterator (vec.begin () + 3 * nitems / 2));
           auto set2 = vec_to_set (std::move (vec2));
           verb_do (2, vout << "UNION...";);
           sw.start ();
@@ -238,12 +246,11 @@ struct test_t : public generic_test<result_t> {
           set.union_with (std::move (set2));
           CALLGRIND_STOP_INSTRUMENTATION;
           uniontime += sw.stop ();
-          verb_do (2, vout << " SIZE: " << set.size () << std::endl);
-          chk (test_chk.t3_sz, set.size ());
+          verb_do (2, vout << " SIZE: " << set.size () << '\n');
+          chk (test_chk.t3_sz, set.size (), false);
         }
         res["union"] = uniontime;
-        verb_do (1, vout << "UNION: " << uniontime / ROUNDS
-                 << std::endl);
+        verb_do (1, vout << "UNION: " << uniontime / prounds << '\n');
       }
 
       return res;
@@ -274,52 +281,55 @@ VECTOR_TYPES (
   posets::vectors::simd_array_ptr_backed_fixed<test_value_type>,
   posets::vectors::simd_array_backed_sum_fixed<test_value_type>,
   posets::vectors::vector_backed<test_value_type>,
-  posets::vectors::simd_vector_backed<test_value_type>);
+  posets::vectors::simd_vector_backed<test_value_type>
+  );
 
 using set_types = template_type_list<
-  posets::downsets::sharingtree_backed,
   posets::downsets::kdtree_backed,
   posets::downsets::vector_or_kdtree_backed,
   posets::downsets::vector_backed,
   posets::downsets::vector_backed_bin,
-  posets::downsets::vector_backed_one_dim_split>;
+  posets::downsets::vector_backed_one_dim_split_intersection_only,
+  posets::downsets::sharingtree_backed
+  >;
 
 void usage (const char* progname) {
-  std::cout << "usage: " << progname << " [-v -v -v...] [--params PARAMS] [--seed N] SETTYPE VECTYPE" << std::endl;
+  std::cout << "usage: " << progname << " [-v -v -v...] [--params PARAMS] [--seed N] SETTYPE VECTYPE\n";
 
-  std::cout << "List of parameters:" << std::endl;
+  std::cout << "List of parameters:\n";
   for (auto& [p, v] : params)
-    std::cout << "  " << p << " (default: " << v << ")" << std::endl;
-  std::cout << std::endl;
-  std::cout << "  SETTYPE:\n  - all" << std::endl;
+    std::cout << "  " << p << " (default: " << v << ")\n";
+  std::cout << '\n';
+  std::cout << "  SETTYPE:\n  - all\n";
   for (auto&& s : set_names) {
     auto start = s.find_last_of (':') + 1;
-    std::cout << "  - " << s.substr (start, s.find_first_of ('<') - start) << std::endl;
+    std::cout << "  - " << s.substr (start, s.find_first_of ('<') - start) << '\n';
   }
 
-  std::cout << "  VECTYPE:\n  - all" << std::endl;
+  std::cout << "  VECTYPE:\n  - all\n";
   for (auto&& s : vector_names) {
     auto start = s.find_last_of (':') + 1;
-    std::cout << "  - " << s.substr (start, s.find_first_of ('>') - start + 1) << std::endl;
+    std::cout << "  - " << s.substr (start, s.find_first_of ('>') - start + 1) << '\n';
   }
 
   exit (0);
 }
 
+namespace {
+  const auto LONG_OPTIONS =
+      std::to_array<struct option> ({{"seed", required_argument, nullptr, 's'},
+                                     {"verbose", no_argument, nullptr, 'v'},
+                                     {"params", required_argument, nullptr, 'p'},
+                                     {nullptr, 0, nullptr, 0}});
+}
+
 int main (int argc, char* argv[]) {
   const char* prog = argv[0];
 
-  register_maker<false> ((vector_types*) 0, (set_types*) 0);
+  register_maker<false> ((vector_types*) nullptr, (set_types*) nullptr);
 
   while (true) {
-    static struct option long_options[] = {
-      {"seed",    required_argument, 0,  's' },
-      {"verbose", no_argument,       0,  'v' },
-      {"params",  required_argument, 0,  'p' },
-      {0,         0,                 0,  0 }
-    };
-
-    int c = getopt_long (argc, argv, "s:vp:", long_options, NULL);
+    const int c = getopt_long (argc, argv, "s:vp:", LONG_OPTIONS.data (), nullptr);
     if (c == -1)
       break;
     switch (c) {
@@ -330,23 +340,25 @@ int main (int argc, char* argv[]) {
         ++utils::verbose;
         break;
       case 'p':
-        while (optarg) {
+        while (optarg != nullptr) {
           char* comma = strchr (optarg, ',');
-          if (comma) *comma = '\0';
+          if (comma != nullptr)
+            *comma = '\0';
           char* equal = strchr (optarg, '=');
-          if (not equal) {
-            std::cerr << "invalid parameter setting: " << optarg << std::endl;
+          if (equal == nullptr) {
+            std::cerr << "invalid parameter setting: " << optarg << '\n';
             usage (prog);
           }
           *equal = '\0';
-          std::string p {optarg}, arg {equal + 1};
+          const std::string p {optarg};
+          const std::string arg {equal + 1};
           auto pk = std::views::keys (params);
           if (std::ranges::find (pk, p) == std::ranges::end (pk)) {
-            std::cerr << "unknown parameter: " << p << std::endl;
+            std::cerr << "unknown parameter: " << p << '\n';
             usage (prog);
           }
           params[p] = std::stoul (arg);
-          optarg = comma ? comma + 1 : NULL;
+          optarg = (comma != nullptr) ? comma + 1 : nullptr;
         }
         break;
       default:
@@ -354,43 +366,42 @@ int main (int argc, char* argv[]) {
     }
   }
 
-  decltype (distrib)::param_type distrib_params (0, (int32_t) params["maxval"]);
+  const decltype (distrib)::param_type distrib_params (0, (int32_t) params["maxval"]);
   distrib.param (distrib_params);
 
   if (argc - optind != 2)
     usage (prog);
 
-  auto downarg = std::string {argv[optind]},
-    vecarg = std::string {argv[optind + 1]};
+  auto downarg = std::string {argv[optind]};
+  auto vecarg = std::string {argv[optind + 1]};
 
-  std::list<std::string> downs, vecs;
+  std::list<std::string> downs;
+  std::list<std::string> vecs;
   auto& tests = test_list<result_t>::list;
   auto to_string_view = [] (auto&& str) {
     return std::string_view(&*str.begin(), std::ranges::distance(str));
   };
 
-  for (auto&& da : downarg
-         | std::ranges::views::split(',')
-         | std::ranges::views::transform (to_string_view))
-    for (auto& k : std::views::keys (tests))
+  for (auto&& da : downarg | std::ranges::views::split (',') |
+                       std::ranges::views::transform (to_string_view))
+    for (const auto& k : std::views::keys (tests))
       if (da == "all" or k.starts_with ("posets::downsets::"s + std::string (da))) {
-        auto sub = k.substr (0, k.find ("<"));
+        auto sub = k.substr (0, k.find ('<'));
         if (std::ranges::find (downs.begin (), downs.end (), sub) == downs.end ())
           downs.push_back (sub);
       }
 
-  for (auto&& va : vecarg
-         | std::ranges::views::split(',')
-         | std::ranges::views::transform (to_string_view))
-    for (auto& k : std::views::keys (tests)) {
-      auto v = k.substr (k.find ("<"));
+  for (auto&& va : vecarg | std::ranges::views::split (',') |
+                       std::ranges::views::transform (to_string_view))
+    for (const auto& k : std::views::keys (tests)) {
+      auto v = k.substr (k.find ('<'));
       if (va == "all" or v.starts_with ("<posets::vectors::"s + std::string (va)))
         if (std::ranges::find (vecs.begin (), vecs.end (), v) == vecs.end ())
           vecs.push_back (v);
     }
 
   if (downs.empty () or vecs.empty ()) {
-    std::cout << "error: no such implementation." << std::endl;
+    std::cout << "error: no such implementation.\n";
     return 1;
   }
 

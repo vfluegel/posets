@@ -14,7 +14,7 @@ namespace posets::downsets {
   template <Vector V>
   class full_set {
     public:
-      typedef V value_type;
+      using value_type = V;
 
       full_set () = delete;
 
@@ -25,14 +25,16 @@ namespace posets::downsets {
       full_set (V&& v) { insert (std::move (v)); }
 
       full_set (std::vector<V>&& elements) noexcept {
-        assert (elements.size () > 0);
+        assert (not elements.empty ());
         for (auto&& e : elements)
           insert (std::move (e));
       }
 
-      bool contains (const V& v) const { return vector_set.find (v) != vector_set.end (); }
+      [[nodiscard]] bool contains (const V& v) const {
+        return vector_set.find (v) != vector_set.end ();
+      }
 
-      auto size () const { return vector_set.size (); }
+      [[nodiscard]] auto size () const { return vector_set.size (); }
 
       bool insert (V&& v) {
         if (vector_set.insert (std::move (v)).second) {
@@ -42,13 +44,17 @@ namespace posets::downsets {
         return false;
       }
 
+      [[nodiscard]] auto& get_backing_vector () { return vector_set; }
+
+      [[nodiscard]] const auto& get_backing_vector () const { return vector_set; }
+
     private:
       // Extraordinarily wasteful.  This computes the closure by taking
       // vector_set, then everything at distance 1
       void downward_close () {
         auto old_size = vector_set.size ();
 
-        while (1) {
+        while (true) {
           std::list<V> newelts;
           std::vector<typename V::value_type> elcopy (vector_set.front ().size ());
           elcopy.reserve (V::capacity_for (elcopy.size ()));
@@ -111,9 +117,9 @@ namespace posets::downsets {
       }
 
       auto begin () { return vector_set.begin (); }
-      const auto begin () const { return vector_set.begin (); }
+      [[nodiscard]] auto begin () const { return vector_set.begin (); }
       auto end () { return vector_set.end (); }
-      const auto end () const { return vector_set.end (); }
+      [[nodiscard]] auto end () const { return vector_set.end (); }
 
     private:
       std::set<V> vector_set;

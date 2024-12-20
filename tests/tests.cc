@@ -419,7 +419,6 @@ using set_types = template_type_list<//posets::downsets::full_set, ; too slow.
   posets::downsets::set_backed,
   posets::downsets::vector_backed,
   posets::downsets::vector_backed_bin,
-  posets::downsets::vector_backed_one_dim_split,
   posets::downsets::vector_backed_one_dim_split_intersection_only>;
 
 

@@ -20,6 +20,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+// clang-format off
+// NOLINTBEGIN
 #pragma once
 
 #include <cassert>
@@ -29,7 +31,6 @@
 #include <chrono>
 #include <sys/times.h>
 #include <ctime>
-#include <chrono>
 
 namespace spot
 {
@@ -41,7 +42,7 @@ namespace spot
   struct stopwatch
   {
   protected:
-    typedef std::chrono::steady_clock clock;
+    using clock = std::chrono::steady_clock;
     clock::time_point start_;
   public:
     /// Marks the start if the measurement
@@ -66,13 +67,13 @@ namespace spot
   struct time_info
   {
     time_info()
-      : utime(0), stime(0), cutime(0), cstime(0)
+
     {
     }
-    clock_t utime;
-    clock_t stime;
-    clock_t cutime;
-    clock_t cstime;
+    clock_t utime{0};
+    clock_t stime{0};
+    clock_t cutime{0};
+    clock_t cstime{0};
   };
 
   /// A timekeeper that accumulate interval of time in a more detailed way.
@@ -82,7 +83,7 @@ namespace spot
   {
   public:
     timer()
-      : running(false)
+
     {
     }
 
@@ -121,7 +122,7 @@ namespace spot
     ///
     /// Any time interval that has been start()ed but not stop()ed
     /// will not be accounted for.
-    clock_t
+    [[nodiscard]] clock_t
     utime() const
     {
       return total_.utime;
@@ -131,7 +132,7 @@ namespace spot
     ///
     /// Any time interval that has been start()ed but not stop()ed
     /// will not be accounted for.
-    clock_t
+    [[nodiscard]] clock_t
     cutime() const
     {
       return total_.cutime;
@@ -142,7 +143,7 @@ namespace spot
     ///
     /// Any time interval that has been start()ed but not stop()ed
     /// will not be accounted for.
-    clock_t
+    [[nodiscard]] clock_t
     stime() const
     {
       return total_.stime;
@@ -152,13 +153,13 @@ namespace spot
     ///
     /// Any time interval that has been start()ed but not stop()ed
     /// will not be accounted for.
-    clock_t
+    [[nodiscard]] clock_t
     cstime() const
     {
       return total_.cstime;
     }
 
-    clock_t get_uscp(bool user, bool system, bool children, bool parent) const
+    [[nodiscard]] clock_t get_uscp(bool user, bool system, bool children, bool parent) const
     {
       clock_t res = 0;
 
@@ -178,7 +179,7 @@ namespace spot
     }
 
     /// \brief Whether the timer is running.
-    bool
+    [[nodiscard]] bool
     is_running() const
     {
       return running;
@@ -189,7 +190,7 @@ namespace spot
     /// When using multithreading the cpu time is not
     /// relevant and we have to deal with wall time to have an
     /// effective timer
-    std::chrono::milliseconds::rep
+    [[nodiscard]] std::chrono::milliseconds::rep
     walltime() const
     {
       return wall_cumul_;
@@ -198,7 +199,7 @@ namespace spot
   protected:
     time_info start_;
     time_info total_;
-    bool running;
+    bool running{false};
     std::chrono::steady_clock::time_point wall_start_;
     std::chrono::milliseconds::rep wall_cumul_ = 0;
   };
@@ -247,16 +248,16 @@ namespace spot
     void
     cancel(const std::string& name)
     {
-      tm_type::iterator i = tm.find(name);
+      auto const i = tm.find(name);
       if (0 == --i->second.second)
         tm.erase(i);
     }
 
     /// Return the timer \a name.
-    const spot::timer&
+    [[nodiscard]] const spot::timer&
     timer(const std::string& name) const
     {
-      tm_type::const_iterator i = tm.find(name);
+      auto const i = tm.find(name);
       return i->second.first;
     }
 
@@ -265,7 +266,7 @@ namespace spot
     /// If empty() return true, then either no timer where ever
     /// started, or all started timers were canceled without
     /// completing any measure.
-    bool
+    [[nodiscard]] bool
     empty() const
     {
       return tm.empty();
@@ -283,13 +284,13 @@ namespace spot
     }
 
   protected:
-    typedef std::pair<spot::timer, int> item_type;
-    typedef std::map<std::string, item_type> tm_type;
+    using item_type = std::pair<spot::timer, int>;
+    using tm_type = std::map<std::string, item_type>;
     tm_type tm;
   };
 
   /// \brief Struct used to start and stop both timer and stopwatch clocks.
-  typedef struct process_timer
+  using process_timer = struct process_timer
   {
     void start()
     {
@@ -319,7 +320,8 @@ namespace spot
     spot::timer cputimer;
     spot::stopwatch walltimer;
     double walltime_lap_ = 0;
-  } process_timer;
+  };
 
   /// @}
 }
+// NOLINTEND

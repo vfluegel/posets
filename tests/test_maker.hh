@@ -10,6 +10,7 @@
 #include <posets/concepts.hh>
 
 /// FOREACH
+// clang-format off
 #define PARENS ()
 #define EXPAND(arg) EXPAND1(EXPAND1(EXPAND1(EXPAND1(arg))))
 #define EXPAND1(arg) EXPAND2(EXPAND2(EXPAND2(EXPAND2(arg))))
@@ -22,6 +23,7 @@
   macro(a1)                                                     \
   __VA_OPT__(FOR_EACH_AGAIN PARENS (macro, __VA_ARGS__))
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
+// clang-format on
 
 template <typename SetType>
 class test_t;
@@ -52,7 +54,7 @@ static std::set<std::string> set_names, vector_names;
   ([] () -> std::string {                                               \
     int _;                                                              \
     char* s = abi::__cxa_demangle (typeid(S).name (), 0, 0, &_);        \
-    std::string ret (s);                                                \
+    const std::string ret (s);                                          \
     free (s);                                                           \
     return ret.substr (0, ret.find_first_of ('<'));                     \
     }) ()
@@ -88,9 +90,8 @@ struct vector_name<posets::vectors::all> {
 };
 
 // One set, one vector
-template <bool CreateAll = true,
-          template <typename V> typename SetType, typename VecType>
-void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
+template <bool CreateAll = true, template <typename V> typename SetType, typename VecType>
+void register_maker (type_list<VecType>*, SetType<VecType>* = nullptr) {
   vector_names.insert (vector_name<VecType>::str);
 
   using res_t = decltype(std::declval<test_t<SetType<VecType>>> () ());
@@ -99,11 +100,11 @@ void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
     std::cout << "[--] running tests for " << ts << std::endl << std::flush;
     if constexpr (std::is_same_v<res_t, void>) {
       test_t<SetType<VecType>> () ();
-      std::cout << "\r[OK]" << std::endl;
+      std::cout << "\r[OK]" << '\n';
     }
     else {
       auto res = test_t<SetType<VecType>> () ();
-      std::cout << "\r[OK]" << std::endl;
+      std::cout << "\r[OK]" << '\n';
       return res;
     }
   };
@@ -129,18 +130,19 @@ void register_maker (type_list<VecType>*, SetType<VecType>* = 0) {
 }
 
 // One set, multiple vectors
-template <bool CreateAll = true,
-          template <typename V> typename SetType, typename VecType, typename VecType2, typename... VecTypes>
-void register_maker (type_list<VecType, VecType2, VecTypes...>*, SetType<VecType>* = 0) {
+template <bool CreateAll = true, template <typename V> typename SetType, typename VecType,
+          typename VecType2, typename... VecTypes>
+void register_maker (type_list<VecType, VecType2, VecTypes...>*, SetType<VecType>* = nullptr) {
   set_names.insert (get_set_name (SetType<VecType>));
-  register_maker<CreateAll, SetType> ((type_list<VecType>*) 0);
-  register_maker<CreateAll, SetType> ((type_list<VecType2, VecTypes...>*) 0);
+  register_maker<CreateAll, SetType> ((type_list<VecType>*) nullptr);
+  register_maker<CreateAll, SetType> ((type_list<VecType2, VecTypes...>*) nullptr);
 }
 
 // Multiple sets, multiple vectors
-template <bool CreateAll = true,
-          template <typename V> typename SetType, template <typename V> typename... SetTypes, typename... VecTypes>
-void register_maker (type_list<VecTypes...>* v, template_type_list<SetType, SetTypes...>* = 0) {
+template <bool CreateAll = true, template <typename V> typename SetType,
+          template <typename V> typename... SetTypes, typename... VecTypes>
+void register_maker (type_list<VecTypes...>* v,
+                     template_type_list<SetType, SetTypes...>* = nullptr) {
   register_maker<CreateAll, SetType> (v);
   register_maker<CreateAll, SetTypes...> (v);
 }

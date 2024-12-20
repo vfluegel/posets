@@ -36,8 +36,9 @@ namespace posets::downsets {
           V&& operator() (V*&& pv) { return std::move (*pv); }
       };
 
-      void inline reset_tree (std::vector<V>&& elements) noexcept {
+      void reset_tree (std::vector<V>&& elements) noexcept {
         std::vector<V*> pelements;
+        pelements.reserve (elements.size ());
         for (auto& e : elements)
           pelements.push_back (&e);
 
@@ -65,10 +66,9 @@ namespace posets::downsets {
 
         // now, we can make a tree out of the set to eliminate dominated
         // elements
-        this->tree.relabel_tree (std::move (pelements), proj ());
-
         auto antichain = std::vector<V*> ();
         antichain.reserve (pelements.size ());
+        this->tree.relabel_tree (std::move (pelements), proj ());
 
         for (V& e : this->tree)
           if (not this->tree.dominates (e, true))
@@ -79,7 +79,7 @@ namespace posets::downsets {
       }
 
     public:
-      typedef V value_type;
+      using value_type = V;
 
       kdtree_backed () = delete;
 
@@ -89,7 +89,7 @@ namespace posets::downsets {
 
       template <typename F>
       auto apply (const F& lambda) const {
-        const auto& backing_vector = this->tree.vector_set;
+        const auto& backing_vector = tree.get_backing_vector ();
         std::vector<V> ss;
         ss.reserve (backing_vector.size ());
 
@@ -104,7 +104,7 @@ namespace posets::downsets {
       kdtree_backed& operator= (const kdtree_backed&) = delete;
       kdtree_backed& operator= (kdtree_backed&&) = default;
 
-      bool contains (const V& v) const { return this->tree.dominates (v); }
+      [[nodiscard]] bool contains (const V& v) const { return this->tree.dominates (v); }
 
       // Union in place
       void union_with (kdtree_backed&& other) {
@@ -114,7 +114,7 @@ namespace posets::downsets {
         // for all elements in this tree, if they are not strictly
         // dominated by the other tree, we keep them
         for (auto& e : tree)
-          if (!other.tree.dominates (e, true))
+          if (not other.tree.dominates (e, true))
             result.push_back (&e);
 
         // for all elements in the other tree, if they are not dominated
@@ -124,7 +124,7 @@ namespace posets::downsets {
             result.push_back (&e);
 
         // ready to rebuild the tree now
-        assert (result.size () > 0);
+        assert (not result.empty ());
         this->tree.relabel_tree (std::move (result), proj ());
         assert (this->tree.is_antichain ());
       }
@@ -141,7 +141,7 @@ namespace posets::downsets {
           // whole list! So we use this to short-circuit the computation: we
           // first check whether x will be there (which happens only if it is
           // itself dominated by some element in other)
-          bool dominated = other.tree.dominates (x);
+          const bool dominated = other.tree.dominates (x);
           if (dominated)
             intersection.push_back (x.copy ());
           else
@@ -150,24 +150,28 @@ namespace posets::downsets {
 
           // If x wasn't in the set of meets, dominated is false and
           // the set of minima is different than what is in this->tree
-          smaller_set |= not dominated;
+          smaller_set or_eq not dominated;
         }
 
         // We can skip building trees and all if this->tree is the antichain
         // of minimal elements
-        if (!smaller_set)
+        if (not smaller_set)
           return;
 
         // Worst-case scenario: we do need to build trees
         reset_tree (std::move (intersection));
       }
 
-      auto size () const { return this->tree.size (); }
+      [[nodiscard]] auto size () const { return this->tree.size (); }
 
-      auto begin () { return this->tree.begin (); }
-      const auto begin () const { return this->tree.begin (); }
-      auto end () { return this->tree.end (); }
-      const auto end () const { return this->tree.end (); }
+      [[nodiscard]] auto& get_backing_vector () { return tree.get_backing_vector (); }
+
+      [[nodiscard]] const auto& get_backing_vector () const { return tree.get_backing_vector (); }
+
+      [[nodiscard]] auto begin () { return this->tree.begin (); }
+      [[nodiscard]] auto begin () const { return this->tree.begin (); }
+      [[nodiscard]] auto end () { return this->tree.end (); }
+      [[nodiscard]] auto end () const { return this->tree.end (); }
 
       friend class vector_or_kdtree_backed<V>;
   };
