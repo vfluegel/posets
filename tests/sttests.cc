@@ -16,6 +16,7 @@ std::vector<VType> vvtovv(const std::vector<std::vector<char>> &vv) {
 
 int main(int argc, char const *argv[]) {
   utils::sharingforest<VType> f{3};
+  utils::sharingforest<VType> f4{4};
 
   // Add some vectors to create a tree
   std::vector<std::vector<char>> data{{6, 3, 2}, {5, 5, 4}, {2, 6, 2}};
@@ -37,7 +38,18 @@ int main(int argc, char const *argv[]) {
   std::cout << f << std::endl;
   f.print_children(idcs2, 0);
 
-  // We repeat the tests above to check we did not break the previous tree
+  // And yet another tree, this time with a shared suffix
+  // and with dimension 4
+  data = {{3, 2, 2, 1}, {4, 1, 2, 1}, {5, 0, 2, 1}};
+  auto fourdim = f4.add_vectors(std::move(vvtovv(data)));
+  std::cout << f4 << std::endl;
+  f4.print_children(fourdim, 0);
+  v = {3, 0, 2, 2};
+  assert(not f4.covers_vector(fourdim, VType(std::move(v))));
+  v = {1, 0, 1, 1};
+  assert(f4.covers_vector(fourdim, VType(std::move(v))));
+
+  // We repeat the first tests above to check we did not break the previous tree
   v = {2, 2, 2};
   assert(f.covers_vector(idcs, VType(std::move(v))));
   v = {6, 3, 1};

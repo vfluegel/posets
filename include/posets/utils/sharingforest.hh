@@ -729,8 +729,7 @@ namespace posets::utils {
             auto res = visited[lay].find (node);
             if (res != visited[lay].end ()) {
 #ifndef NDEBUG
-              std::cout << "Avoided node in covers check, DFS cache helps."
-                        << std::endl;
+              std::cout << "Avoided node in covers check, DFS cache helps.\n";
 #endif
               continue;
             }
@@ -791,7 +790,7 @@ namespace posets::utils {
                   << " total layers' size=" << totlayer << " (bytes per el=" << sizeof (st_node)
                   << ")" << '\n';
         std::cout << "[Forest stats] Child buff size=" << this->cbuffer_size
-                  << " (bytes per el=" << sizeof (size_t) << ")" << std::endl;
+                  << " (bytes per el=" << sizeof (size_t) << ")\n";
 #endif
         return root_id;
       }
@@ -826,7 +825,7 @@ namespace posets::utils {
   template <Vector V>
   inline std::ostream& operator<< (std::ostream& os, const sharingforest<V>& f) {
     for (auto&& el : f.get_all ())
-      os << el << std::endl;
+      os << el << '\n';
 
     os << "Layers:" << '\n';
     for (auto& l : f.layers) {
