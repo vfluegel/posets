@@ -712,6 +712,10 @@ namespace posets::utils {
       bool covers_vector (size_t root, const V& covered) {
         // Stack with tuples (layer, node id, child id)
         std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
+        // Visited cache
+        std::vector<std::unordered_map<std::pair<size_t, size_t>, bool,
+                                       boost::hash<std::pair<size_t, size_t>>>>
+            visited (this->dim + 1);
 
         // Add all roots at dimension 0 such that their labels cover the first
         // component of the given vector
@@ -725,6 +729,14 @@ namespace posets::utils {
 
         while (not to_visit.empty ()) {
           const auto [lay, node, child] = to_visit.top ();
+
+          auto is_visited = visited[lay].find (std::make_pair (node, child));
+          if (is_visited == visited[lay].end ()) {
+            continue;
+          } else {
+            visited[lay][std::make_pair (node, child)] = true;
+          }
+
           assert (lay < this->dim);
           assert (node < layers[lay].size ());
           to_visit.pop ();
