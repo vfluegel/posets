@@ -1,6 +1,7 @@
 #pragma once
 #include <sstream>
 #include <iostream>
+#include <utility>
 
 namespace posets::utils {
   // https://stackoverflow.com/questions/37490881/overloading-operator-in-c-with-a-prefix
@@ -8,15 +9,15 @@ namespace posets::utils {
     private:
       std::ostream &outstream;
       bool prev_ended_in_eol = true;
-      std::string prefix = "";
+      std::string prefix;
 
     protected:
-      virtual int sync()
+      int sync() override
       {
-        int ret = std::stringbuf::sync();
+        const int ret = std::stringbuf::sync ();
         if (view ().empty ())
           return ret;
-        bool ends_in_eol = (view ().back () == '\n');
+        const bool ends_in_eol = (view ().back () == '\n');
         std::istringstream s (str ());
         str (""); // erase buffer
 
@@ -28,7 +29,7 @@ namespace posets::utils {
             outstream << prefix << line;
           first_line = false;
           if (not s.eof () or ends_in_eol)
-            outstream << std::endl;
+            outstream << '\n';
         }
         outstream << std::flush;
         prev_ended_in_eol = ends_in_eol;
@@ -36,12 +37,13 @@ namespace posets::utils {
       };
 
     public:
-      prefixstringbuf(std::ostream &outstream)
-        : std::stringbuf (std::ios_base::out), outstream (outstream) {}
+      prefixstringbuf (std::ostream& outstream)
+        : std::stringbuf (std::ios_base::out),
+          outstream (outstream) {}
 
-      ~prefixstringbuf() { sync (); }
+      ~prefixstringbuf () override { sync (); }
 
-      void set_prefix (std::string s) { prefix = s; }
+      void set_prefix (std::string s) { prefix = std::move(s); }
   };
 
   class voutstream : public std::ostream {
@@ -49,7 +51,7 @@ namespace posets::utils {
       prefixstringbuf buf;
 
     public:
-      voutstream () : std::ostream(0), buf (std::cout) { init (&buf); }
+      voutstream () : std::ostream (nullptr), buf (std::cout) { init (&buf); }
 
       template<typename T>
       std::ostream& operator<< (const T& data) {

@@ -16,7 +16,7 @@ namespace posets::vectors {
   };
 
   /// Conditional member when has_sum is set in @a simd_array_backed_.
-  template <bool has_sum>
+  template <bool HasSum>
   struct sum_member {
       int sum = 0;
   };
@@ -31,7 +31,7 @@ namespace posets::vectors {
       static void destroy (Data* d) { delete (d); }
   };
 
-  template <bool embeds_data, typename Data>
+  template <bool EmbedsData, typename Data>
   struct malloc_member {
       // static inline boost::object_pool<Data> malloc {8192};
       static inline basic_malloc<Data> malloc;

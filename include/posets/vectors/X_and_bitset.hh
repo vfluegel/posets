@@ -15,42 +15,42 @@ namespace posets::vectors {
     return nbitsets * sizeof (unsigned long) * 8;
   }
 
-  template <typename X, size_t NBitsets>
-  class X_and_bitset {
-      static constexpr auto Bools = nbitsets_to_nbools (NBitsets);
-
+  template <typename X, size_t NBitsets, size_t Bools = nbitsets_to_nbools (NBitsets)>
+  class x_and_bitset {
     public:
       using value_type = typename X::value_type;
 
-      X_and_bitset (size_t k) : k {k}, x {std::min (bitset_threshold, k)} {}
+      x_and_bitset (size_t k) : k {k}, x {std::min (bitset_threshold, k)} {}
 
-      X_and_bitset (std::span<const value_type> v)
+      x_and_bitset (std::span<const value_type> v)
         : k {v.size ()},
           x {std::span (v.data (), std::min (bitset_threshold, k))},
           sum {0} {
         bools.reset ();
-        for (size_t i = bitset_threshold; i < k; ++i)
-          if ((bools[i - bitset_threshold] = (v[i] + 1)) == true)
+        for (size_t i = bitset_threshold; i < k; ++i) {
+          bools[i - bitset_threshold] = v[i] + 1;
+          if (bools[i - bitset_threshold])
             sum++;
+        }
         assert (sum == bools.count ());
       }
 
-      X_and_bitset (std::initializer_list<value_type> v)
-        : X_and_bitset (posets::utils::vector_mm<value_type> (v)) {}
+      x_and_bitset (std::initializer_list<value_type> v)
+        : x_and_bitset (posets::utils::vector_mm<value_type> (v)) {}
 
-      size_t size () const { return k; }
+      [[nodiscard]] size_t size () const { return k; }
 
-      X_and_bitset (X_and_bitset&& other) = default;
+      x_and_bitset (x_and_bitset&& other) = default;
 
     private:
-      X_and_bitset (size_t k, X&& x, std::bitset<Bools>&& bools)
+      x_and_bitset (size_t k, X&& x, std::bitset<Bools>&& bools)
         : k {k},
           x {std::move (x)},
           bools {std::move (bools)} {
         sum = this->bools.count ();
       }
 
-      X_and_bitset (size_t k, X&& x, std::bitset<Bools>&& bools, size_t sum)
+      x_and_bitset (size_t k, X&& x, std::bitset<Bools>&& bools, size_t sum)
         : k {k},
           x {std::move (x)},
           bools {std::move (bools)},
@@ -60,14 +60,14 @@ namespace posets::vectors {
 
     public:
       // explicit copy operator
-      X_and_bitset copy () const {
+      [[nodiscard]] x_and_bitset copy () const {
         std::bitset<Bools> b = bools;
-        return X_and_bitset (k, x.copy (), std::move (b), sum);
+        return x_and_bitset (k, x.copy (), std::move (b), sum);
       }
 
-      X_and_bitset& operator= (X_and_bitset&& other) = default;
+      x_and_bitset& operator= (x_and_bitset&& other) = default;
 
-      X_and_bitset& operator= (const X_and_bitset& other) = delete;
+      x_and_bitset& operator= (const x_and_bitset& other) = delete;
 
       void to_vector (std::span<value_type> v) const {
         x.to_vector (std::span (v.data (), bitset_threshold));
@@ -77,7 +77,7 @@ namespace posets::vectors {
 
       class po_res {
         public:
-          po_res (const X_and_bitset& lhs, const X_and_bitset& rhs) {
+          po_res (const x_and_bitset& lhs, const x_and_bitset& rhs) {
             // Note that we are putting the bitset first in that comparison.
             bgeq = (lhs.sum >= rhs.sum);
             bleq = (lhs.sum <= rhs.sum);
@@ -96,25 +96,25 @@ namespace posets::vectors {
             bleq = bleq and po.leq ();
           }
 
-          inline bool geq () { return bgeq; }
+          bool geq () { return bgeq; }
 
-          inline bool leq () { return bleq; }
+          bool leq () { return bleq; }
 
         private:
           bool bgeq, bleq;
       };
 
-      inline auto partial_order (const X_and_bitset& rhs) const {
+      [[nodiscard]] auto partial_order (const x_and_bitset& rhs) const {
         assert (rhs.k == k);
         return po_res (*this, rhs);
       }
 
-      bool operator== (const X_and_bitset& rhs) const {
+      bool operator== (const x_and_bitset& rhs) const {
         assert (not(sum != rhs.sum and bools == rhs.bools));
         return sum == rhs.sum and bools == rhs.bools and x == rhs.x;
       }
 
-      bool operator!= (const X_and_bitset& rhs) const {
+      bool operator!= (const x_and_bitset& rhs) const {
         assert (not(sum != rhs.sum and bools == rhs.bools));
         return sum != rhs.sum or bools != rhs.bools or x != rhs.x;
       }
@@ -125,20 +125,19 @@ namespace posets::vectors {
         return x[i];
       }
 
-    public:
-      X_and_bitset meet (const X_and_bitset& rhs) const {
+      [[nodiscard]] x_and_bitset meet (const x_and_bitset& rhs) const {
         assert (rhs.k == k);
-        return X_and_bitset (k, x.meet (rhs.x), bools & rhs.bools);
+        return x_and_bitset (k, x.meet (rhs.x), bools bitand rhs.bools);
       }
 
-      bool operator< (const X_and_bitset& rhs) const {
+      bool operator< (const x_and_bitset& rhs) const {
         int cmp = std::memcmp (&bools, &rhs.bools, sizeof (bools));
         if (cmp == 0)
           return (x < rhs.x);
         return (cmp < 0);
       }
 
-      auto bin () const {
+      [[nodiscard]] auto bin () const {
         auto bitset_bin = sum;  // / (k - bitset_threshold);
 
         // Even if X doesn't have bin (), our local sum is valid, in that:
@@ -167,12 +166,12 @@ namespace posets::vectors {
   };
 
   template <class X>
-  class X_and_bitset<X, 0> : public X {
+  class x_and_bitset<X, 0> : public X {
       using X::X;
 
     public:
-      X_and_bitset (X&& x) : X (std::move (x)) {}
-      X_and_bitset copy () const { return X::copy (); }
-      X_and_bitset meet (const X_and_bitset& other) const { return X::meet (other); }
+      x_and_bitset (X&& x) : X (std::move (x)) {}
+      x_and_bitset copy () const { return X::copy (); }
+      x_and_bitset meet (const x_and_bitset& other) const { return X::meet (other); }
   };
 }

@@ -1,5 +1,6 @@
 BasedOnStyle: Google
 
+LineEnding: LF
 ColumnLimit: 99
 IndentAccessModifiers: true
 ConstructorInitializerIndentWidth: 2

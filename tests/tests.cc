@@ -188,7 +188,7 @@ struct test_t : public generic_test<void> {
 
         vec_to_set (std::move (e1));
       }
-      
+
       // simple intersect
       std::cout << "Simple intersection test" << std::endl;
       {
@@ -285,7 +285,7 @@ struct test_t : public generic_test<void> {
       assert(other_set.contains(v5));
 
     }
- 
+
     void fivedim() {
       std::cout << "Final tests" << std::endl;
       {
@@ -328,7 +328,7 @@ struct test_t : public generic_test<void> {
       assert (not F.contains (VType (il {7, 0, 9 ,9, 8})));
       assert (F.contains (VType (il {9, 0, 7 ,7, 9})));
       assert (not F.contains (VType (il {9, 0, 7 ,7, 10})));
-      
+
     }
 
     void sixteendim() {
@@ -394,7 +394,7 @@ namespace posets::vectors {
   using simd_array_ptr_backed_sum_fixed = posets::vectors::simd_array_ptr_backed_sum<T, 10>;
 
   template <typename T>
-  using simd_vector_and_bitset_backed = posets::vectors::X_and_bitset<posets::vectors::simd_vector_backed<T>, 1>;
+  using simd_vector_and_bitset_backed = posets::vectors::x_and_bitset<posets::vectors::simd_vector_backed<T>, 1>;
 }
 
 #define DEFINE_VECTOR_NAME(V) template <> struct vector_name<V> { static constexpr auto str = #V; };
@@ -419,7 +419,6 @@ using set_types = template_type_list<//posets::downsets::full_set, ; too slow.
   posets::downsets::set_backed,
   posets::downsets::vector_backed,
   posets::downsets::vector_backed_bin,
-  posets::downsets::vector_backed_one_dim_split,
   posets::downsets::vector_backed_one_dim_split_intersection_only>;
 
 

@@ -13,10 +13,10 @@ namespace posets::downsets {
   template <Vector V>
   class set_backed {
     public:
-      typedef V value_type;
+      using value_type = V;
 
     private:
-      set_backed () {}
+      set_backed () = default;
 
     public:
       set_backed (std::vector<V>&& elements) {
@@ -30,14 +30,14 @@ namespace posets::downsets {
       set_backed (set_backed&&) = default;
       set_backed& operator= (set_backed&&) = default;
 
-      bool contains (const V& v) const {
+      [[nodiscard]] bool contains (const V& v) const {
         for (const auto& e : vector_set)
           if (v.partial_order (e).leq ())
             return true;
         return false;
       }
 
-      auto size () const { return vector_set.size (); }
+      [[nodiscard]] auto size () const { return vector_set.size (); }
 
       bool insert (V&& v) {
         utils::reference_wrapper_set<const V> to_remove;
@@ -49,7 +49,7 @@ namespace posets::downsets {
             should_be_inserted = false;
             break;
           }
-          else if (po.geq ()) {
+          if (po.geq ()) {
             should_be_inserted = true;
             to_remove.insert (std::cref (e));
           }
@@ -86,7 +86,7 @@ namespace posets::downsets {
           }
           // If x wasn't <= an element in other, then x is not in the
           // intersection, thus the set is updated.
-          smaller_set |= not dominated;
+          smaller_set or_eq not dominated;
         }
 
         if (smaller_set)
@@ -111,10 +111,14 @@ namespace posets::downsets {
         return res;
       }
 
-      auto begin () { return vector_set.begin (); }
-      const auto begin () const { return vector_set.begin (); }
-      auto end () { return vector_set.end (); }
-      const auto end () const { return vector_set.end (); }
+      [[nodiscard]] auto& get_backing_vector () { return vector_set; }
+
+      [[nodiscard]] const auto& get_backing_vector () const { return vector_set; }
+
+      [[nodiscard]] auto begin () { return vector_set.begin (); }
+      [[nodiscard]] auto begin () const { return vector_set.begin (); }
+      [[nodiscard]] auto end () { return vector_set.end (); }
+      [[nodiscard]] auto end () const { return vector_set.end (); }
 
     private:
       std::set<V> vector_set;

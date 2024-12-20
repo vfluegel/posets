@@ -15,12 +15,12 @@ namespace posets::downsets {
   template <Vector V>
   class vector_backed {
     public:
-      typedef V value_type;
+      using value_type = V;
 
       vector_backed (V&& v) { insert (std::move (v)); }
 
       vector_backed (std::vector<V>&& elements) noexcept {
-        assert (elements.size () > 0);
+        assert (not elements.empty ());
         for (auto&& e : elements)
           insert (std::move (e));
       }
@@ -37,14 +37,12 @@ namespace posets::downsets {
 
       bool operator== (const vector_backed& other) = delete;
 
-      bool contains (const V& v) const {
-        for (const auto& e : vector_set)
-          if (v.partial_order (e).leq ())
-            return true;
-        return false;
+      [[nodiscard]] bool contains (const V& v) const {
+        return std::ranges::any_of (vector_set,
+                                    [&v] (const V& e) { return v.partial_order (e).leq (); });
       }
 
-      auto size () const { return vector_set.size (); }
+      [[nodiscard]] auto size () const { return vector_set.size (); }
 
       bool insert (V&& v) {
         bool must_remove = false;
@@ -61,8 +59,8 @@ namespace posets::downsets {
             // leq if must_remove is true.
             return false;
           }
-          else if (res.geq ()) {  // v dominates *it
-            must_remove = true;   /* *it should be removed */
+          if (res.geq ()) {     // v dominates *it
+            must_remove = true; /* *it should be removed */
           }
           else {               // *it needs to be kept
             if (result != it)  // This can be false only on the first element.
@@ -99,7 +97,7 @@ namespace posets::downsets {
           };
           // If x wasn't <= an element in other, then x is not in the
           // intersection, thus the set is updated.
-          smaller_set |= not dominated;
+          smaller_set or_eq not dominated;
         }
 
         if (smaller_set)
@@ -114,10 +112,11 @@ namespace posets::downsets {
         return res;
       }
 
-      // auto        begin ()      { return vector_set.begin (); }
-      const auto begin () const { return vector_set.begin (); }
-      // auto        end()         { return vector_set.end (); }
-      const auto end () const { return vector_set.end (); }
+      [[nodiscard]] auto begin () const { return vector_set.begin (); }
+      [[nodiscard]] auto end () const { return vector_set.end (); }
+
+      [[nodiscard]] auto& get_backing_vector () { return vector_set; }
+      [[nodiscard]] const auto& get_backing_vector () const { return vector_set; }
 
       template <Vector V2>
       friend class vector_or_kdtree_backed;
