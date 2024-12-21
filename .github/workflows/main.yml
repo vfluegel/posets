@@ -18,7 +18,7 @@ jobs:
         find include -name '*.hh' -print0 | xargs -0 clang-format --dry-run -Werror
     - name: Setup configuration
       run: |
-        meson setup build --buildtype debug
+        CXXFLAGS="-DDIMENSION=100" meson setup build --buildtype debug
     - name: Compile everything
       run: |
         cd build && meson compile

@@ -98,6 +98,7 @@ struct {
     }                                                                                        \
   } while (0)
 
+
 template <typename SetType>
 struct test_t : public generic_test<result_t> {
     using v_type = typename SetType::value_type;

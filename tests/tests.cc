@@ -343,6 +343,7 @@ struct test_t : public generic_test<void> {
             {-1, 9, -1, 0, -1, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
           }));
       assert (F.contains (VType (il {-1, 9, -1, 0, -1, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})));
+      assert (not F.contains (VType (il {-1, 9, -1, 0, -1, 9, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0})));
     }
 
     void operator() () {
