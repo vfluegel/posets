@@ -557,9 +557,7 @@ namespace posets::utils {
     public:
       sharingforest () = default;
 
-      sharingforest (size_t dim) {
-        this->init (dim);
-      }
+      sharingforest (size_t dim) { this->init (dim); }
 
       ~sharingforest () {
         if (layers.empty ())
@@ -636,9 +634,8 @@ namespace posets::utils {
 
       size_t st_intersect (size_t root1, size_t root2) {
         auto cache_res = cached_inter[0].find (std::make_pair (root1, root2));
-        if (cache_res != cached_inter[0].end ()) {
+        if (cache_res != cached_inter[0].end ())
           return cache_res->second;
-        }
 
         // Stack contains node and child ID of S, node and child ID of T, layer
         std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> current_stack;
