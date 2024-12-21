@@ -102,6 +102,10 @@ namespace posets::utils {
       std::vector<std::unordered_map<std::pair<size_t, size_t>, bool,
                                      boost::hash<std::pair<size_t, size_t>>>>
           simulating;
+      // Two more for union and intersection
+      std::vector<std::unordered_map<std::pair<size_t, size_t>, size_t,
+                                     boost::hash<std::pair<size_t, size_t>>>>
+          cached_union, cached_inter;
 
       void init (size_t dim) {
         this->dim = dim;
@@ -110,6 +114,8 @@ namespace posets::utils {
         for (size_t i = 0; i < dim + 1; i++) {
           inverse.emplace_back (SHARINGFOREST_INIT_LAYER_SIZE, st_hash (this), st_equal (this));
           simulating.emplace_back ();
+          cached_union.emplace_back ();
+          cached_inter.emplace_back ();
         }
 
         cbuffer_size = SHARINGFOREST_INIT_LAYER_SIZE * SHARINGFOREST_INIT_MAX_CHILDREN;
@@ -308,14 +314,18 @@ namespace posets::utils {
         return res;
       }
 
-      std::optional<size_t> add_if_not_simulated (st_node& node, size_t destination_layer,
-                                                  st_node& father) {
+      bool is_simulated (size_t nodeidx, st_node& father, size_t destination_layer) {
         size_t* siblings = child_buffer + father.cbuffer_offset;
-        size_t res = add_node (node, destination_layer);
         for (size_t s = 0; s < father.numchild; s++)
-          if (simulates (siblings[s], res, destination_layer))
-            return std::nullopt;
-        return res;
+          if (simulates (siblings[s], nodeidx, destination_layer))
+            return true;
+        return false;
+      }
+
+      std::pair<size_t, bool> add_if_not_simulated (st_node& node, size_t destination_layer,
+                                                    st_node& father) {
+        size_t res = add_node (node, destination_layer);
+        return std::make_pair (res, is_simulated (res, father, destination_layer));
       }
 
       size_t node_union (size_t ns, size_t nt, size_t destination_layer) {
@@ -340,6 +350,16 @@ namespace posets::utils {
           // of it, still dirty, will be cleaned later
           if (c_s == 0 and c_t == 0) {
             assert (node_s.label == node_t.label);
+            // Before creating a draft node and continuing, let's check the
+            // cache
+            auto cache_res = cached_union[layer].find (std::make_pair (n_s, n_t));
+            if (layer > destination_layer and cache_res != cached_union[layer].end ()) {
+              auto& father = layers[layer - 1].back ();
+              if (not is_simulated (cache_res->second, father, layer))
+                add_son (father, layer, cache_res->second);
+              continue;
+            }
+            // Not found, so draft a node up
             if (layer < this->dim) {
               layers[layer].emplace_back (node_s.label, 0,
                                           add_children (node_s.numchild + node_t.numchild));
@@ -360,9 +380,10 @@ namespace posets::utils {
             // not a repetition of something in the table already!
             auto& father = layers[layer - 1].back ();
             layers[layer].pop_back ();
-            auto union_res = add_if_not_simulated (under_construction, layer, father);
-            if (union_res.has_value ())
-              add_son (father, layer, union_res.value ());
+            auto [union_res, domd] = add_if_not_simulated (under_construction, layer, father);
+            cached_union[layer][std::make_pair (n_s, n_t)] = union_res;
+            if (not domd)
+              add_son (father, layer, union_res);
             // Recursive step: Either just add the son to the draft node and
             // continue with the next node, or continue down the tree if
             // necessary
@@ -410,7 +431,7 @@ namespace posets::utils {
           }
         }
 
-        // Clean up the root, we remove it for and re-add it, so it is checked whether an identical
+        // Clean up the root, we remove it and re-add it, so it is checked whether an identical
         // node exists
         auto constructed_node = layers[destination_layer].back ();
         layers[destination_layer].pop_back ();
@@ -453,8 +474,12 @@ namespace posets::utils {
           if (new_node.numchild == 0)
             return std::nullopt;
         }
-        if (father.has_value ())
-          return add_if_not_simulated (new_node, destination_layer, father.value ());
+        if (father.has_value ()) {
+          auto [res, domd] = add_if_not_simulated (new_node, destination_layer, father.value ());
+          if (domd)
+            return std::nullopt;
+          return res;
+        }
         return add_node (new_node, destination_layer);
       }
 
@@ -607,22 +632,26 @@ namespace posets::utils {
       size_t st_union (size_t root1, size_t root2) { return node_union (root1, root2, 0); }
 
       size_t st_intersect (size_t root1, size_t root2) {
+        auto cache_res = cached_inter[0].find (std::make_pair (root1, root2));
+        if (cache_res != cached_inter[0].end ()) {
+          return cache_res->second;
+        }
+
         // Stack contains node and child ID of S, node and child ID of T, layer
         std::stack<std::tuple<size_t, size_t, size_t, size_t, size_t>> current_stack;
 
-        const st_node root_nod_e1 = layers[0][root1];
-        const st_node root_nod_e2 = layers[0][root2];
-        assert (root_nod_e1.numchild > 0 and root_nod_e2.numchild > 0);
-        size_t* root1_children = child_buffer + root_nod_e1.cbuffer_offset;
-        size_t* root2_children = child_buffer + root_nod_e2.cbuffer_offset;
-
         // Insert a draft of root node, dirty one without checking if it's there,
         // we'll clean later
+        const st_node root_nod_e1 = layers[0][root1];
+        const st_node root_nod_e2 = layers[0][root2];
         layers[0].emplace_back (static_cast<typename V::value_type> (-1), 0,
                                 add_children (root_nod_e1.numchild + root_nod_e2.numchild));
 
         // We are ready to start a stack-simulated DFS of the synchronized-product
         // of the trees
+        assert (root_nod_e1.numchild > 0 and root_nod_e2.numchild > 0);
+        size_t* root1_children = child_buffer + root_nod_e1.cbuffer_offset;
+        size_t* root2_children = child_buffer + root_nod_e2.cbuffer_offset;
         for (size_t c_1 = 1; c_1 <= root_nod_e1.numchild; c_1++) {
           for (size_t c_2 = 1; c_2 <= root_nod_e2.numchild; c_2++) {
             current_stack.push ({root1_children[root_nod_e1.numchild - c_1], 0,
@@ -641,6 +670,16 @@ namespace posets::utils {
           // It's the first time we see this product node, so let's insert a draft
           // of it, again dirty
           if (c_s == 0 and c_t == 0) {
+            // Before creating a draft node and continuing, let's check the
+            // cache
+            auto cache_res = cached_inter[layer].find (std::make_pair (n_s, n_t));
+            if (cache_res != cached_inter[layer].end ()) {
+              auto& father = layers[layer - 1].back ();
+              if (not is_simulated (cache_res->second, father, layer))
+                add_son_unordered (father, layer, cache_res->second);
+              continue;
+            }
+            // Not found, so draft a node up
             if (layer < this->dim) {
               layers[layer].emplace_back (std::min (node_s.label, node_t.label), 0,
                                           add_children (node_s.numchild + node_t.numchild));
@@ -658,9 +697,10 @@ namespace posets::utils {
             auto under_construction = layers[layer].back ();
             auto& father = layers[layer - 1].back ();
             layers[layer].pop_back ();
-            auto intersect_res = add_if_not_simulated (under_construction, layer, father);
-            if (intersect_res.has_value ())
-              add_son_unordered (father, layer, intersect_res.value ());
+            auto [intersect_res, domd] = add_if_not_simulated (under_construction, layer, father);
+            cached_inter[layer][std::make_pair (n_s, n_t)] = intersect_res;
+            if (not domd)
+              add_son_unordered (father, layer, intersect_res);
             // Below we have the "recursive" step in which we put two elements into
             // the stack to remember what was the next child of the node at this
             // level and to go deeper in the tree if needed
