@@ -324,7 +324,7 @@ namespace posets::utils {
 
       std::pair<size_t, bool> add_if_not_simulated (st_node& node, size_t destination_layer,
                                                     st_node& father) {
-        size_t res = add_node (node, destination_layer);
+        const size_t res = add_node (node, destination_layer);
         return std::make_pair (res, is_simulated (res, father, destination_layer));
       }
 
