@@ -354,6 +354,9 @@ namespace posets::utils {
             // cache
             auto cache_res = cached_union[layer].find (std::make_pair (n_s, n_t));
             if (layer > destination_layer and cache_res != cached_union[layer].end ()) {
+#ifndef NDEBUG
+              std::cout << "Avoided node in union = cache hit.\n";
+#endif
               auto& father = layers[layer - 1].back ();
               if (not is_simulated (cache_res->second, father, layer))
                 add_son (father, layer, cache_res->second);
@@ -674,6 +677,9 @@ namespace posets::utils {
             // cache
             auto cache_res = cached_inter[layer].find (std::make_pair (n_s, n_t));
             if (cache_res != cached_inter[layer].end ()) {
+#ifndef NDEBUG
+              std::cout << "Avoided node in intersection = cache hit.\n";
+#endif
               auto& father = layers[layer - 1].back ();
               if (not is_simulated (cache_res->second, father, layer))
                 add_son_unordered (father, layer, cache_res->second);
