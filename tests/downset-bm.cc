@@ -38,7 +38,7 @@ using namespace std::literals;
 namespace utils = posets::utils;
 
 #ifndef DIMENSION
-# define DIMENSION (128UL * 1024UL)
+# define DIMENSION 10UL // (128UL * 1024UL)
 #endif
 
 size_t posets::vectors::bool_threshold = DIMENSION;
