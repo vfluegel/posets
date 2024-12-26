@@ -53,16 +53,14 @@ namespace posets::downsets {
         for (const auto& r : refs)
           undomd.push_back (std::move (*r));
 
-#ifndef NDEBUG
-        std::cout << "Undominated " << undomd.size () << "/"
-                  << this->vector_set.size () << '\n';
-#endif
+# ifndef NDEBUG
+        std::cout << "Undominated " << undomd.size () << "/" << this->vector_set.size () << '\n';
+# endif
 
         this->root = this->forest->add_vectors (std::move (undomd));
         this->vector_set = this->forest->get_all (this->root);
 #endif
       }
-
 
     public:
       using value_type = V;

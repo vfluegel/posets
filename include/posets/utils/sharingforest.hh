@@ -775,12 +775,14 @@ namespace posets::utils {
                 std::cout << "Avoided node in covers check, DFS cache helps.\n";
 #endif
                 continue;
-              } else {
+              }
+              else {
                 // we conjoin with previous result if any to make sure we have
                 // more early exits based on implication condition above
                 visited[lay][node] = res->second and owe_strict;
               }
-            } else {
+            }
+            else {
               // no early exit? then mark the node as visited and keep going
               visited[lay][node] = owe_strict;
             }
@@ -802,7 +804,8 @@ namespace posets::utils {
             const size_t c = child;
             auto child_node = layers[lay + 1][children[c]];
             // early exit if the largest child is smaller
-            if (covered[lay] > child_node.label or (owe_strict and covered[lay] >= child_node.label))
+            if (covered[lay] > child_node.label or
+                (owe_strict and covered[lay] >= child_node.label))
               continue;
 
             bool still_owe_strict = owe_strict and covered[lay] == child_node.label;
