@@ -136,11 +136,12 @@ namespace posets::downsets {
         if (not smaller_set)
           return;
 
-        // Worst-case scenario: we do need to work
 #ifndef SHARINGTREE_GRAPHINTER
+        // Worst-case scenario: we do need to work
         this->root = this->forest->add_vectors (std::move (intersection));
         this->vector_set = this->forest->get_all (this->root);
 #else
+        // Worst-case scenario: we do need to work
         size_t op1 = this->root;
         size_t op2 = other.root;
         const size_t new_root = this->forest->st_intersect (op1, op2);
