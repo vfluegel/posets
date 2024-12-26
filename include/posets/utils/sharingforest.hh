@@ -737,9 +737,9 @@ namespace posets::utils {
        * DFA representation of (bisimulation non-dominated) vectors, it could be
        * exponentially faster than this.
        */
-      bool covers_vector (size_t root, const V& covered) {
-        // Stack with tuples (layer, node id, child id)
-        std::stack<std::tuple<size_t, size_t, size_t>> to_visit;
+      bool covers_vector (size_t root, const V& covered, bool strict = false) {
+        // Stack with tuples (layer, node id, strictness, child id)
+        std::stack<std::tuple<size_t, size_t, bool, size_t>> to_visit;
         // Visited cache
         std::vector<std::unordered_map<size_t, bool>> visited;
         for (size_t i = 0; i < this->dim + 1; i++)
@@ -751,12 +751,14 @@ namespace posets::utils {
         size_t* root_children = child_buffer + root_node.cbuffer_offset;
         for (size_t i = 0; i < root_node.numchild; i++) {
           assert (root_children[i] < layers[1].size ());
-          if (covered[0] <= layers[1][root_children[i]].label)
-            to_visit.emplace (1, root_children[i], 0);
+          if (covered[0] <= layers[1][root_children[i]].label) {
+            const bool owe_strict = strict and covered[0] == layers[1][root_children[i]].label;
+            to_visit.emplace (1, root_children[i], owe_strict, 0);
+          }
         }
 
         while (not to_visit.empty ()) {
-          const auto [lay, node, child] = to_visit.top ();
+          const auto [lay, node, owe_strict, child] = to_visit.top ();
           assert (lay <= this->dim);
           assert (node < layers[lay].size ());
           to_visit.pop ();
@@ -764,21 +766,32 @@ namespace posets::utils {
           // NOTE: this works only because we are doing a DFS and not a BFS
           if (child == 0) {
             auto res = visited[lay].find (node);
+            // if we visited with strictness then we can safely exit only if
+            // we come back with strictness prev_strict -> owe_strict, i.e.
+            // not prev_strict or owe_strict
             if (res != visited[lay].end ()) {
+              if ((not res->second) or owe_strict) {
 #ifndef NDEBUG
-              std::cout << "Avoided node in covers check, DFS cache helps.\n";
+                std::cout << "Avoided node in covers check, DFS cache helps.\n";
 #endif
-              continue;
+                continue;
+              }
+              // we conjoin with previous result if any to make sure we have
+              // more early exits based on implication condition above
+              visited[lay][node] = res->second and owe_strict;
             }
-            // no early exit? then mark the node as visited and keep going
-            visited[lay][node] = true;
+            else {
+              // no early exit? then mark the node as visited and keep going
+              visited[lay][node] = owe_strict;
+            }
           }
           const auto parent = layers[lay][node];
 
           // base case: reached the bottom layer
           if (lay == this->dim) {
             assert (child == 0);
-            if (covered[lay - 1] <= parent.label)
+            if (covered[lay - 1] < parent.label or
+                ((not owe_strict) and covered[lay - 1] == parent.label))
               return true;
           }
           else {  // recursive case
@@ -789,13 +802,15 @@ namespace posets::utils {
             const size_t c = child;
             auto child_node = layers[lay + 1][children[c]];
             // early exit if the largest child is smaller
-            if (covered[lay] > child_node.label)
+            if (covered[lay] > child_node.label or
+                (owe_strict and covered[lay] >= child_node.label))
               continue;
 
+            const bool still_owe_strict = owe_strict and covered[lay] == child_node.label;
             assert (c < parent.numchild);
             if (c + 1 < parent.numchild)
-              to_visit.emplace (lay, node, c + 1);
-            to_visit.emplace (lay + 1, children[c], 0);
+              to_visit.emplace (lay, node, owe_strict, c + 1);
+            to_visit.emplace (lay + 1, children[c], still_owe_strict, 0);
           }
         }
         return false;
