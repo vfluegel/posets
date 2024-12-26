@@ -752,7 +752,7 @@ namespace posets::utils {
         for (size_t i = 0; i < root_node.numchild; i++) {
           assert (root_children[i] < layers[1].size ());
           if (covered[0] <= layers[1][root_children[i]].label) {
-            bool owe_strict = strict and covered[0] == layers[1][root_children[i]].label;
+            const bool owe_strict = strict and covered[0] == layers[1][root_children[i]].label;
             to_visit.emplace (1, root_children[i], owe_strict, 0);
           }
         }
@@ -776,11 +776,9 @@ namespace posets::utils {
 #endif
                 continue;
               }
-              else {
-                // we conjoin with previous result if any to make sure we have
-                // more early exits based on implication condition above
-                visited[lay][node] = res->second and owe_strict;
-              }
+              // we conjoin with previous result if any to make sure we have
+              // more early exits based on implication condition above
+              visited[lay][node] = res->second and owe_strict;
             }
             else {
               // no early exit? then mark the node as visited and keep going
@@ -808,7 +806,7 @@ namespace posets::utils {
                 (owe_strict and covered[lay] >= child_node.label))
               continue;
 
-            bool still_owe_strict = owe_strict and covered[lay] == child_node.label;
+            const bool still_owe_strict = owe_strict and covered[lay] == child_node.label;
             assert (c < parent.numchild);
             if (c + 1 < parent.numchild)
               to_visit.emplace (lay, node, owe_strict, c + 1);

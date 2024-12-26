@@ -99,8 +99,8 @@ namespace posets::downsets {
 
       // Union in place
       void union_with (sharingtree_backed&& other) {
-        size_t op1 = this->root;
-        size_t op2 = other.root;
+        const size_t op1 = this->root;
+        const size_t op2 = other.root;
         const size_t new_root = this->forest->st_union (op1, op2);
         this->root = new_root;
         this->vector_set = this->forest->get_all (this->root);
