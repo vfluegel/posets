@@ -94,7 +94,14 @@ namespace posets::downsets {
       [[nodiscard]] const auto& get_backing_vector () const { return vector_set; }
 
       [[nodiscard]] bool contains (const V& v) const {
+#ifdef SHARINGTREE_SIMCONTAINS
+        size_t sappling = this->forest->add_vectors (std::array<V, 1> {v.copy ()});
+        this->forest->print_children (sappling, 0);
+        this->forest->print_children (this->root, 0);
+        return this->forest->check_simulation (this->root, sappling);
+#else
         return this->forest->covers_vector (this->root, v);
+#endif
       }
 
       // Union in place
@@ -109,6 +116,11 @@ namespace posets::downsets {
 
       // Intersection in place
       void intersect_with (const sharingtree_backed& other) {
+#ifdef SHARINGTREE_GRAPHINTER
+        // Worst-case scenario: we do need to work
+        this->root = this->forest->st_intersect (this->root, other.root);
+        this->vector_set = this->forest->get_all (this->root);
+#else
         std::vector<V> intersection;
         bool smaller_set = false;
 
@@ -136,16 +148,8 @@ namespace posets::downsets {
         if (not smaller_set)
           return;
 
-#ifndef SHARINGTREE_GRAPHINTER
         // Worst-case scenario: we do need to work
         this->root = this->forest->add_vectors (std::move (intersection));
-        this->vector_set = this->forest->get_all (this->root);
-#else
-        // Worst-case scenario: we do need to work
-        size_t op1 = this->root;
-        size_t op2 = other.root;
-        const size_t new_root = this->forest->st_intersect (op1, op2);
-        this->root = new_root;
         this->vector_set = this->forest->get_all (this->root);
 #endif
         this->trim_by_dom ();
