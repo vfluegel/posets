@@ -174,9 +174,8 @@ namespace posets::utils {
         while (not current_stack.empty ()) {
           auto [n1idx, c1, n2idx, c2, layidx] = current_stack.top ();
 #ifndef NDEBUG
-          std::cout << "Simulation check: "
-                    << "Node " << layidx << "." << n1idx << " (c=" << c1 << ") vs. " << layidx
-                    << "." << n2idx << " (c=" << c2 << ")\n";
+          std::cout << "Simulation check: " << "Node " << layidx << "." << n1idx << " (c=" << c1
+                    << ") vs. " << layidx << "." << n2idx << " (c=" << c2 << ")\n";
 #endif
           current_stack.pop ();
           n1 = layers[layidx][n1idx];
