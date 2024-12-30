@@ -148,6 +148,11 @@ namespace posets::utils {
       }
 
       bool simulates (size_t n1idx, size_t n2idx, size_t layidx) {
+        auto node_pair = std::make_pair (n1idx, n2idx);
+        auto cached = simulating[layidx].find (node_pair);
+        if (cached != simulating[layidx].end ())
+          return cached->second;
+
         st_node n1 = layers[layidx][n1idx];
         st_node n2 = layers[layidx][n2idx];
         // If the node is in the last layer, we just check the labels
@@ -168,6 +173,10 @@ namespace posets::utils {
 
         while (not current_stack.empty ()) {
           auto [n1idx, c1, n2idx, c2, layidx] = current_stack.top ();
+#ifndef NDEBUG
+          std::cout << "Simulation check: " << "Node " << layidx << "." << n1idx << " (c=" << c1
+                    << ") vs. " << layidx << "." << n2idx << " (c=" << c2 << ")\n";
+#endif
           current_stack.pop ();
           n1 = layers[layidx][n1idx];
           n2 = layers[layidx][n2idx];
@@ -184,27 +193,35 @@ namespace posets::utils {
               current_stack.pop ();
               current_stack.emplace (m1idx, 0, m2idx, d2 + 1, ell);
             }
-
-            // Another base case: we've iterated through all the children on the
-            // n1 side and failed to find a simulating one
           }
+          // Another base case: we've iterated through all the children on the
+          // n1 side and failed to find a simulating one
           else if (c1 == n1.numchild) {
+#ifndef NDEBUG
+            std::cout << "Another base case (layidx=" << layidx << ")\n";
+#endif
             simulating[layidx][std::make_pair (n1idx, n2idx)] = false;
-            return false;
-
-            // The last case is that we have two valid children indices,
-            // then we have to go deeper in the product tree (lest the cache saves
-            // us, or we find that the subtree will just certainly not satisfy
-            // simulation)
+            if (not current_stack.empty ()) {
+              auto [m1idx, d1, m2idx, d2, ell] = current_stack.top ();
+              current_stack.pop ();
+              current_stack.emplace (m1idx, d1 + 1, m2idx, d2, ell);
+            }
           }
+          // The last case is that we have two valid children indices,
+          // then we have to go deeper in the product tree (lest the cache saves
+          // us, or we find that the subtree will just certainly not satisfy
+          // simulation)
           else {
             n1_children = child_buffer + n1.cbuffer_offset;
             n2_children = child_buffer + n2.cbuffer_offset;
-            auto node_pair = std::make_pair (n1_children[c1], n2_children[c2]);
-            auto cached = simulating[layidx + 1].find (node_pair);
+            node_pair = std::make_pair (n1_children[c1], n2_children[c2]);
+            cached = simulating[layidx + 1].find (node_pair);
             // Did we get lucky with the cache? then push back an updated node
             // with less obligations or keep searching on the n1 side
             if (cached != simulating[layidx + 1].end ()) {
+#ifndef NDEBUG
+              std::cout << "Got lucky with simulate cache!\n";
+#endif
               if (cached->second)
                 current_stack.emplace (n1idx, 0, n2idx, c2 + 1, layidx);
               else
@@ -231,7 +248,10 @@ namespace posets::utils {
             }
           }
         }
-        return true;
+        node_pair = std::make_pair (n1idx, n2idx);
+        cached = simulating[layidx].find (node_pair);
+        assert (cached != simulating[layidx].end ());
+        return cached->second;
       }
 
       void add_son (st_node& node, size_t son_layer, size_t son) {
@@ -616,16 +636,14 @@ namespace posets::utils {
       }
 
       void print_children (size_t n, size_t layer) {
+#ifndef NDEBUG
         assert (layer <= this->dim);
         st_node& node = layers[layer][n];
         size_t* children = child_buffer + node.cbuffer_offset;
-#ifndef NDEBUG
         std::cout << std::string (layer, '\t') << layer << "." << n << " ["
                   << static_cast<int> (node.label) << "] -> (" << (layer == this->dim ? "" : "\n");
-#endif
         for (size_t i = 0; i < node.numchild; i++)
           print_children (children[i], layer + 1);
-#ifndef NDEBUG
         std::cout << (layer == this->dim ? " " : std::string (layer, '\t')) << " )\n";
 #endif
       }
