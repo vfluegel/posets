@@ -296,7 +296,7 @@ namespace posets::utils {
         // Shift elements in the child buffer to make room for the new child
         // Overwrite simulated elements!
         std::optional<size_t> to_insert { son };
-        size_t next_insertion { left };
+        size_t next_insertion { static_cast<size_t>(left) };
         size_t current_children { node.numchild };
         for (size_t i = left; i < current_children; i++) {
           assert (next_insertion <= i);
