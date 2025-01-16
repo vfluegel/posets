@@ -295,13 +295,13 @@ namespace posets::utils {
 
         // Shift elements in the child buffer to make room for the new child
         // Overwrite simulated elements!
-        std::optional<size_t> to_insert { son };
-        size_t next_insertion { static_cast<size_t>(left) };
-        size_t current_children { node.numchild };
+        std::optional<size_t> to_insert {son};
+        size_t next_insertion {static_cast<size_t> (left)};
+        size_t current_children {node.numchild};
         for (size_t i = left; i < current_children; i++) {
           assert (next_insertion <= i);
           if (not simulates (son, children[i], son_layer)) {
-            if (next_insertion < i and not to_insert.has_value()) {
+            if (next_insertion < i and not to_insert.has_value ()) {
               // The next insertion point is smaller, so we already looked at it
               // We can directly overwrite the value with our current one
               children[next_insertion] = children[i];
@@ -309,17 +309,17 @@ namespace posets::utils {
             else {
               // The space we want to insert is occupied - we save the value for later
               size_t temp = children[i];
-              children[next_insertion] = to_insert.value();
+              children[next_insertion] = to_insert.value ();
               to_insert = temp;
             }
             next_insertion++;
           }
           else {
-            if (to_insert.has_value()) {
-              // There might still be a child we have not inserted so we overwrite 
-              // No other check necessary because next_insertion is always <= i 
-              children[next_insertion] = to_insert.value();
-              to_insert.reset();
+            if (to_insert.has_value ()) {
+              // There might still be a child we have not inserted so we overwrite
+              // No other check necessary because next_insertion is always <= i
+              children[next_insertion] = to_insert.value ();
+              to_insert.reset ();
               next_insertion++;
             }
             node.numchild--;
@@ -328,7 +328,8 @@ namespace posets::utils {
 
         // If we had to shift every element, there will be something left to insert
         // We add it to the new end
-        if (to_insert.has_value()) children[next_insertion] = to_insert.value();
+        if (to_insert.has_value ())
+          children[next_insertion] = to_insert.value ();
 
         // Increase count by the new element
         node.numchild++;
