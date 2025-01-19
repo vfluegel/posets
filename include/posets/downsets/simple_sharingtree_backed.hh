@@ -22,8 +22,8 @@ namespace posets::downsets {
       static std::map<size_t, std::weak_ptr<utils::sharingforest<V>>> forest_map;
 
       void init_forest (size_t dimkey) {
-        auto res = sharingtree_backed::forest_map.find (dimkey);
-        if (res != sharingtree_backed::forest_map.end ()) {
+        auto res = simple_sharingtree_backed::forest_map.find (dimkey);
+        if (res != simple_sharingtree_backed::forest_map.end ()) {
           // two cases now, either the pointer is live and we take a lock on it
           // or it's dead, and we need to update it
           const std::shared_ptr<utils::sharingforest<V>> live = res->second.lock ();
@@ -37,7 +37,7 @@ namespace posets::downsets {
         }
         else {
           this->forest = std::make_shared<utils::sharingforest<V>> (dimkey);
-          sharingtree_backed::forest_map.emplace (dimkey, this->forest);
+          simple_sharingtree_backed::forest_map.emplace (dimkey, this->forest);
         }
       }
 
@@ -97,18 +97,18 @@ namespace posets::downsets {
     public:
       using value_type = V;
 
-      sharingtree_backed () = delete;
-      sharingtree_backed (const sharingtree_backed&) = delete;
-      sharingtree_backed (sharingtree_backed&&) = default;
-      sharingtree_backed& operator= (const sharingtree_backed&) = delete;
-      sharingtree_backed& operator= (sharingtree_backed&&) = default;
+      simple_sharingtree_backed () = delete;
+      simple_sharingtree_backed (const simple_sharingtree_backed&) = delete;
+      simple_sharingtree_backed (simple_sharingtree_backed&&) = default;
+      simple_sharingtree_backed& operator= (const simple_sharingtree_backed&) = delete;
+      simple_sharingtree_backed& operator= (simple_sharingtree_backed&&) = default;
 
-      sharingtree_backed (std::vector<V>&& elements) {
+      simple_sharingtree_backed (std::vector<V>&& elements) {
         init_forest (elements.begin ()->size ());
         reset_tree (std::move (elements));
       }
 
-      sharingtree_backed (V&& v) {
+      simple_sharingtree_backed (V&& v) {
         init_forest (v.size ());
         this->root = this->forest->add_vectors (std::array<V, 1> {std::move (v)}, false);
         this->vector_set = this->forest->get_all (this->root);
@@ -127,14 +127,7 @@ namespace posets::downsets {
       }
 
       // Union in place
-      void union_with (sharingtree_backed&& other) {
-        const size_t op1 = this->root;
-        const size_t op2 = other.root;
-        const size_t new_root = this->forest->st_union (op1, op2);
-        this->root = new_root;
-        this->vector_set = this->forest->get_all (this->root);
-        this->trim_by_dom ();
-
+      void union_with (simple_sharingtree_backed&& other) {
         assert (other.size () > 0);
         std::vector<V*> undomd;
         undomd.reserve (this->size () + other.size ());
@@ -167,7 +160,7 @@ namespace posets::downsets {
       }
 
       // Intersection in place
-      void intersect_with (const sharingtree_backed& other) {
+      void intersect_with (const simple_sharingtree_backed& other) {
         std::vector<V> intersection;
         bool smaller_set = false;
 
@@ -207,15 +200,15 @@ namespace posets::downsets {
         for (const auto& v : this->vector_set)
           ss.push_back (lambda (v));
 
-        return sharingtree_backed (std::move (ss));
+        return simple_sharingtree_backed (std::move (ss));
       }
   };
 
   template <Vector V>
-  std::map<size_t, std::weak_ptr<utils::sharingforest<V>>> sharingtree_backed<V>::forest_map;
+  std::map<size_t, std::weak_ptr<utils::sharingforest<V>>> simple_sharingtree_backed<V>::forest_map;
 
   template <Vector V>
-  inline std::ostream& operator<< (std::ostream& os, const sharingtree_backed<V>& f) {
+  inline std::ostream& operator<< (std::ostream& os, const simple_sharingtree_backed<V>& f) {
     for (auto&& el : f.vector_set)
       os << el << std::endl;
     return os;

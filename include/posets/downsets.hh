@@ -5,6 +5,7 @@
 #include <posets/downsets/kdtree_backed.hh>
 #include <posets/downsets/set_backed.hh>
 #include <posets/downsets/sharingtree_backed.hh>
+#include <posets/downsets/simple_sharingtree_backed.hh>
 #include <posets/downsets/vector_backed.hh>
 #include <posets/downsets/vector_backed_bin.hh>
 #include <posets/downsets/vector_backed_one_dim_split_intersection_only.hh>
