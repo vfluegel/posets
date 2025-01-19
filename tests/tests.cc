@@ -415,6 +415,7 @@ VECTOR_TYPES (posets::vectors::vector_backed<char>,
 
 using set_types = template_type_list<//posets::downsets::full_set, ; too slow.
   posets::downsets::sharingtree_backed,
+  posets::downsets::simple_sharingtree_backed,
   posets::downsets::kdtree_backed,
   posets::downsets::vector_or_kdtree_backed,
   posets::downsets::set_backed,

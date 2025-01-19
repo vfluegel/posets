@@ -554,7 +554,7 @@ namespace posets::utils {
        * code).
        */
       size_t build_node (std::vector<size_t>& vecs, size_t current_layer,
-                         const auto& element_vec) {
+                         const auto& element_vec, bool check_sim=true) {
         assert (not vecs.empty ());
         // If currentLayer is 0, we set the label to the dummy value -1 for the root
         // Else all nodes should have the same value at index currentLayer - 1, so
@@ -590,13 +590,16 @@ namespace posets::utils {
 
             for (auto& [n, children] : new_partition) {
               // Build a new son for each individual value at currentLayer + 1
-              const size_t new_son = build_node (children, current_layer + 1, element_vec);
+              const size_t new_son = build_node (children, current_layer + 1,
+                                                 element_vec, check_sim);
               bool found = false;
-              size_t* current_children = child_buffer + new_node.cbuffer_offset;
-              for (size_t s = 0; s < new_node.numchild; s++) {
-                if (simulates (current_children[s], new_son, current_layer + 1)) {
-                  found = true;
-                  break;
+              if (check_sim) {
+                size_t* current_children = child_buffer + new_node.cbuffer_offset;
+                for (size_t s = 0; s < new_node.numchild; s++) {
+                  if (simulates (current_children[s], new_son, current_layer + 1)) {
+                    found = true;
+                    break;
+                  }
                 }
               }
               if (not found)
@@ -609,7 +612,7 @@ namespace posets::utils {
       // NOLINTEND(misc-no-recursion)
 
     public:
-      sharingforest () = default;
+      sharingforest () = delete;
 
       sharingforest (size_t dim) { this->init (dim); }
 
@@ -869,7 +872,7 @@ namespace posets::utils {
       }
 
       template <std::ranges::input_range R>
-      size_t add_vectors (R&& elements) {
+      size_t add_vectors (R&& elements, bool check_sim=true) {
         assert (not layers.empty ());
 
         auto element_vec = std::forward<R> (elements);
@@ -879,7 +882,7 @@ namespace posets::utils {
         std::vector<size_t> vector_ids (element_vec.size ());
         std::iota (vector_ids.begin (), vector_ids.end (), 0);
 
-        const size_t root_id = build_node (vector_ids, 0, element_vec);
+        const size_t root_id = build_node (vector_ids, 0, element_vec, check_sim);
 #ifndef NDEBUG
         size_t maxlayer = 0;
         size_t totlayer = 0;

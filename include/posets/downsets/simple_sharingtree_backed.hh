@@ -13,7 +13,7 @@
 namespace posets::downsets {
 
   template <Vector V>
-  class sharingtree_backed {
+  class simple_sharingtree_backed {
     private:
       size_t dim;
       size_t root {};
@@ -41,25 +41,57 @@ namespace posets::downsets {
         }
       }
 
-      void trim_by_dom () {
-#ifdef SHARINGTREE_DOMTRIM
-        std::vector<V*> refs;
-        std::vector<V> undomd;
-        refs.reserve (this->vector_set.size ());
-        undomd.reserve (this->vector_set.size ());
-        for (auto& v : this->vector_set)
-          if (not this->forest->covers_vector (this->root, v, true))
-            refs.push_back (&v);
-        for (const auto& r : refs)
-          undomd.push_back (std::move (*r));
+      // Code borrowed from kdtree_backed, same idea as there to avoid
+      // duplicates, and then to keep the antichain of max elements only
+      void reset_tree (std::vector<V>&& elements) noexcept {
+        std::vector<V*> pelements;
+        pelements.reserve (elements.size ());
+        for (auto& e : elements)
+          pelements.push_back (&e);
 
-# ifndef NDEBUG
-        std::cout << "Undominated " << undomd.size () << "/" << this->vector_set.size () << '\n';
-# endif
+        std::sort (pelements.begin (), pelements.end (),
+                   // A strict total order.
+                   [] (const V* v1, const V* v2) {
+                     // A quite costly thing to do.
+                     for (size_t i = 0; i < v1->size (); ++i) {
+                       if ((*v1)[i] > (*v2)[i])
+                         return false;
+                       if ((*v1)[i] < (*v2)[i])
+                         return true;
+                     }
+                     // Equal MUST return false.
+                     return false;
+                   });
 
-        this->root = this->forest->add_vectors (std::move (undomd));
-        this->vector_set = this->forest->get_all (this->root);
-#endif
+        // then remove duplicates
+        size_t dups_pos = pelements.size ();
+        for (size_t i = pelements.size () - 1; i > 0; --i)
+          if (*pelements[i] == *pelements[i - 1])
+            std::swap (pelements[i], pelements[--dups_pos]);
+        if (dups_pos != pelements.size ())
+          pelements.erase (pelements.begin () + dups_pos, pelements.end ());
+
+        // now, we can make a tree out of the set to eliminate dominated
+        // elements
+        std::vector<V> set_elements;
+        set_elements.reserve (pelements.size ());
+        for (auto& e : pelements)
+          set_elements.push_back (e->copy ());
+
+        size_t temp_tree = this->forest->add_vectors (std::move (set_elements), false);
+
+        std::vector<V> antichain;
+        antichain.reserve (pelements.size ());
+        this->vector_set.clear ();
+        this->vector_set.reserve (pelements.size ());
+        for (auto& e : pelements) {
+          if (not this->forest->covers_vector (temp_tree, *e, true)) {
+            this->vector_set.push_back (e->copy ());
+            antichain.push_back (std::move (*e));
+          }
+        }
+
+        this->root = this->forest->add_vectors (std::move (antichain), false);
       }
 
     public:
@@ -73,16 +105,13 @@ namespace posets::downsets {
 
       sharingtree_backed (std::vector<V>&& elements) {
         init_forest (elements.begin ()->size ());
-        this->root = this->forest->add_vectors (std::move (elements));
-        this->vector_set = this->forest->get_all (this->root);
-        this->trim_by_dom ();
+        reset_tree (std::move (elements));
       }
 
       sharingtree_backed (V&& v) {
         init_forest (v.size ());
-        this->root = this->forest->add_vectors (std::array<V, 1> {std::move (v)});
+        this->root = this->forest->add_vectors (std::array<V, 1> {std::move (v)}, false);
         this->vector_set = this->forest->get_all (this->root);
-        this->trim_by_dom ();
       }
 
       [[nodiscard]] auto size () const { return this->vector_set.size (); }
@@ -94,14 +123,7 @@ namespace posets::downsets {
       [[nodiscard]] const auto& get_backing_vector () const { return vector_set; }
 
       [[nodiscard]] bool contains (const V& v) const {
-#ifdef SHARINGTREE_SIMCONTAINS
-        size_t sappling = this->forest->add_vectors (std::array<V, 1> {v.copy ()});
-        this->forest->print_children (sappling, 0);
-        this->forest->print_children (this->root, 0);
-        return this->forest->check_simulation (this->root, sappling);
-#else
         return this->forest->covers_vector (this->root, v);
-#endif
       }
 
       // Union in place
@@ -112,15 +134,40 @@ namespace posets::downsets {
         this->root = new_root;
         this->vector_set = this->forest->get_all (this->root);
         this->trim_by_dom ();
+
+        assert (other.size () > 0);
+        std::vector<V*> undomd;
+        undomd.reserve (this->size () + other.size ());
+        // for all elements in this tree, if they are not strictly
+        // dominated by the other tree, we keep them
+        for (auto& e : this->vector_set)
+          if (not other.forest->covers_vector (other.root, e, true))
+            undomd.push_back (&e);
+
+        // for all elements in the other tree, if they are not dominated
+        // (not necessarily strict) by this tree, we keep them
+        for (auto& e : other.vector_set)
+          if (not this->forest->covers_vector (this->root, e, false))
+            undomd.push_back (&e);
+        
+        // ready to rebuild the tree now
+        assert (not undomd.empty ());
+
+        // We can move the referenced elements
+        std::vector<V> result;
+        result.reserve (undomd.size ());
+        this->vector_set.clear ();
+        this->vector_set.reserve (undomd.size ());
+        for (const auto& r : undomd) {
+          this->vector_set.push_back (r->copy ());
+          result.push_back (std::move (*r));
+        }
+
+        this->root = this->forest->add_vectors (std::move (result), false);
       }
 
       // Intersection in place
       void intersect_with (const sharingtree_backed& other) {
-#ifdef SHARINGTREE_GRAPHINTER
-        // Worst-case scenario: we do need to work
-        this->root = this->forest->st_intersect (this->root, other.root);
-        this->vector_set = this->forest->get_all (this->root);
-#else
         std::vector<V> intersection;
         bool smaller_set = false;
 
@@ -149,10 +196,7 @@ namespace posets::downsets {
           return;
 
         // Worst-case scenario: we do need to work
-        this->root = this->forest->add_vectors (std::move (intersection));
-        this->vector_set = this->forest->get_all (this->root);
-#endif
-        this->trim_by_dom ();
+        this->reset_tree (std::move (intersection));
       }
 
       template <typename F>
