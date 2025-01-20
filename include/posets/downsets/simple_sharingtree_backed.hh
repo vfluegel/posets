@@ -99,9 +99,8 @@ namespace posets::downsets {
         for (auto it = this->vector_set.begin (); it != this->vector_set.end (); ++it) {
           for (auto it2 = it + 1; it2 != this->vector_set.end (); ++it2) {
             auto po = it->partial_order (*it2);
-            if (po.leq () or po.geq ()) {
+            if (po.leq () or po.geq ())
               return false;
-            }
           }
         }
         return true;
