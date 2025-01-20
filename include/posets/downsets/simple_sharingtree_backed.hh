@@ -95,6 +95,17 @@ namespace posets::downsets {
         this->root = this->forest->add_vectors (std::move (antichain), false);
       }
 
+      [[nodiscard]] bool is_antichain () const {
+        for (auto it = this->vector_set.begin (); it != this->vector_set.end (); ++it) {
+          for (auto it2 = it + 1; it2 != this->vector_set.end (); ++it2) {
+            auto po = it->partial_order (*it2);
+            if (po.leq () or po.geq ())
+              return false;
+          }
+        }
+        return true;
+      }
+
     public:
       using value_type = V;
 
@@ -107,6 +118,7 @@ namespace posets::downsets {
       simple_sharingtree_backed (std::vector<V>&& elements) {
         init_forest (elements.begin ()->size ());
         reset_tree (std::move (elements));
+        assert (this->is_antichain ());
       }
 
       simple_sharingtree_backed (V&& v) {
@@ -158,6 +170,7 @@ namespace posets::downsets {
         }
 
         this->root = this->forest->add_vectors (std::move (result), false);
+        assert (this->is_antichain ());
       }
 
       // Intersection in place
@@ -191,6 +204,7 @@ namespace posets::downsets {
 
         // Worst-case scenario: we do need to work
         this->reset_tree (std::move (intersection));
+        assert (this->is_antichain ());
       }
 
       template <typename F>

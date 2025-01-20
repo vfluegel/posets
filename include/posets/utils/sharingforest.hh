@@ -792,7 +792,7 @@ namespace posets::utils {
        * DFA representation of (bisimulation non-dominated) vectors, it could be
        * exponentially faster than this.
        */
-      bool covers_vector (size_t root, const V& covered, bool strict = false) {
+      bool covers_vector (size_t root, const V& covered, bool strict=false) {
         // Stack with tuples (layer, node id, strictness, child id)
         std::stack<std::tuple<size_t, size_t, bool, size_t>> to_visit;
         // Visited cache
