@@ -82,25 +82,29 @@ namespace posets::downsets {
                                                             false);
 
         std::vector<V> antichain;
+        std::vector<V> result;
         antichain.reserve (pelements.size ());
-        this->vector_set.clear ();
-        this->vector_set.reserve (pelements.size ());
+        result.reserve (pelements.size ());
         for (auto& e : pelements) {
           if (not this->forest->covers_vector (temp_tree, *e, true)) {
-            this->vector_set.push_back (e->copy ());
-            antichain.push_back (std::move (*e));
+            std::cout << "undomd " << *e << std::endl;
+            antichain.push_back (e->copy ());
+            result.push_back (std::move (*e));
           }
         }
 
         this->root = this->forest->add_vectors (std::move (antichain), false);
+        this->vector_set = std::move (result);
       }
 
       [[nodiscard]] bool is_antichain () const {
         for (auto it = this->vector_set.begin (); it != this->vector_set.end (); ++it) {
           for (auto it2 = it + 1; it2 != this->vector_set.end (); ++it2) {
             auto po = it->partial_order (*it2);
-            if (po.leq () or po.geq ())
+            if (po.leq () or po.geq ()) {
+              std::cout << *it << " and " << *it2 << " are comparable!\n";
               return false;
+            }
           }
         }
         return true;
@@ -160,16 +164,17 @@ namespace posets::downsets {
         assert (not undomd.empty ());
 
         // We can now move the referenced elements
+        std::vector<V> antichain;
         std::vector<V> result;
+        antichain.reserve (undomd.size ());
         result.reserve (undomd.size ());
-        this->vector_set.clear ();
-        this->vector_set.reserve (undomd.size ());
         for (auto& r : undomd) {
-          this->vector_set.push_back (r->copy ());
+          antichain.push_back (r->copy ());
           result.push_back (std::move (*r));
         }
 
-        this->root = this->forest->add_vectors (std::move (result), false);
+        this->root = this->forest->add_vectors (std::move (antichain), false);
+        this->vector_set = std::move (result);
         assert (this->is_antichain ());
       }
 

@@ -149,6 +149,7 @@ struct test_t : public generic_test<void> {
       std::cout << "Singleton union test" << std::endl;
       SetType set_one_elt_cpy (v1.copy ());
       set_one_elt.union_with (std::move (set_one_elt_cpy));
+      assert (set_one_elt.size () == 1);
       assert (set_one_elt.contains (v1));
       assert (set_one_elt.contains (v4));
       assert (not set_one_elt.contains (v2));
@@ -176,6 +177,24 @@ struct test_t : public generic_test<void> {
         assert (set.contains (VType (il {1, 1, 0})));
         assert (not set.contains (VType (il {1, 3, 0})));
       }
+
+      std::cout << "Intersect that reduces to a single element" << std::endl;
+      {
+        VType v1 (il {2, 4, 1, 8, 5, 4, 1, 8, 1, 8});
+        VType v2 (il {2, 4, 1, 8, 7, 4, 1, 10, 2, 8});
+        std::vector<VType> e1, e2;
+        e1.emplace_back(v1.copy ());
+        SetType s1 = vec_to_set (std::move (e1));
+        e2.emplace_back(v2.copy ());
+        SetType s2 = vec_to_set (std::move (e2));
+
+        s1.intersect_with (std::move (s2));
+
+        assert (s1.contains (v1));
+        assert (not s1.contains (v2));
+        assert (s1.size () == 1);
+      }
+
       std::cout << "Create set" << std::endl;
       {
         std::vector<VType> e1;

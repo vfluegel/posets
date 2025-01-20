@@ -857,8 +857,7 @@ namespace posets::utils {
             const size_t c = child;
             auto child_node = layers[lay + 1][children[c]];
             // early exit if the largest child is smaller
-            if (covered[lay] > child_node.label or
-                (owe_strict and covered[lay] >= child_node.label))
+            if (covered[lay] > child_node.label)
               continue;
 
             const bool still_owe_strict = owe_strict and covered[lay] == child_node.label;
