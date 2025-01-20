@@ -328,7 +328,8 @@ namespace {
                                      {.name=nullptr,   .has_arg=0,                 .flag=nullptr, .val= 0}});
 }
 
-int main (int argc, char* argv[]) noexcept {
+// NOLINTBEGIN(bugprone-exception-escape)
+int main (int argc, char* argv[]) {
   const char* prog = argv[0];
 
   register_maker<false> ((vector_types*) nullptr, (set_types*) nullptr);
@@ -427,3 +428,4 @@ int main (int argc, char* argv[]) noexcept {
   }
   return 0;
 }
+// NOLINTEND(bugprone-exception-escape)
