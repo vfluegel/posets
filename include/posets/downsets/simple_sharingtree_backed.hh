@@ -86,7 +86,6 @@ namespace posets::downsets {
         result.reserve (pelements.size ());
         for (auto& e : pelements) {
           if (not this->forest->covers_vector (temp_tree, *e, true)) {
-            std::cout << "undomd " << *e << std::endl;
             antichain.push_back (e->copy ());
             result.push_back (std::move (*e));
           }
@@ -101,7 +100,6 @@ namespace posets::downsets {
           for (auto it2 = it + 1; it2 != this->vector_set.end (); ++it2) {
             auto po = it->partial_order (*it2);
             if (po.leq () or po.geq ()) {
-              std::cout << *it << " and " << *it2 << " are comparable!\n";
               return false;
             }
           }
