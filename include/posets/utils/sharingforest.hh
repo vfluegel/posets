@@ -293,6 +293,7 @@ namespace posets::utils {
             left = mid + 1;
         }
 
+        // NOLINTBEGIN(bugprone-unchecked-optional-access)
         // Shift elements in the child buffer to make room for the new child
         // Overwrite simulated elements!
         std::optional<size_t> to_insert {son};
@@ -329,7 +330,8 @@ namespace posets::utils {
         // If we had to shift every element, there will be something left to insert
         // We add it to the new end
         if (to_insert.has_value ())
-          children[next_insertion] = *to_insert;
+          children[next_insertion] = to_insert.value ();
+        // NOLINTEND(bugprone-unchecked-optional-access)
 
         // Increase count by the new element
         node.numchild++;
