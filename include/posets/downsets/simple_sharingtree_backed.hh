@@ -78,7 +78,8 @@ namespace posets::downsets {
         for (auto& e : pelements)
           set_elements.push_back (e->copy ());
 
-        size_t temp_tree = this->forest->add_vectors (std::move (set_elements), false);
+        const size_t temp_tree = this->forest->add_vectors (std::move (set_elements),
+                                                            false);
 
         std::vector<V> antichain;
         antichain.reserve (pelements.size ());
@@ -146,12 +147,12 @@ namespace posets::downsets {
         // ready to rebuild the tree now
         assert (not undomd.empty ());
 
-        // We can move the referenced elements
+        // We can now move the referenced elements
         std::vector<V> result;
         result.reserve (undomd.size ());
         this->vector_set.clear ();
         this->vector_set.reserve (undomd.size ());
-        for (const auto& r : undomd) {
+        for (auto& r : undomd) {
           this->vector_set.push_back (r->copy ());
           result.push_back (std::move (*r));
         }
