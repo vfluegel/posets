@@ -242,9 +242,7 @@ namespace posets::utils {
         other.tree = nullptr;
       }
 
-      ~kdtree () {
-        delete[] this->tree;
-      }
+      ~kdtree () { delete[] this->tree; }
 
       kdtree& operator= (kdtree&& other) noexcept {
         this->dim = other.dim;
