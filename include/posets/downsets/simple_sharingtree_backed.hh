@@ -78,8 +78,7 @@ namespace posets::downsets {
         for (auto& e : pelements)
           set_elements.push_back (e->copy ());
 
-        const size_t temp_tree = this->forest->add_vectors (std::move (set_elements),
-                                                            false);
+        const size_t temp_tree = this->forest->add_vectors (std::move (set_elements), false);
 
         std::vector<V> antichain;
         std::vector<V> result;
@@ -159,7 +158,7 @@ namespace posets::downsets {
         for (auto& e : other.vector_set)
           if (not this->forest->covers_vector (this->root, e, false))
             undomd.push_back (&e);
-        
+
         // ready to rebuild the tree now
         assert (not undomd.empty ());
 
@@ -225,7 +224,8 @@ namespace posets::downsets {
   };
 
   template <Vector V>
-  std::map<size_t, std::weak_ptr<utils::sharingforest<V>>> simple_sharingtree_backed<V>::forest_map;
+  std::map<size_t, std::weak_ptr<utils::sharingforest<V>>>
+      simple_sharingtree_backed<V>::forest_map;
 
   template <Vector V>
   inline std::ostream& operator<< (std::ostream& os, const simple_sharingtree_backed<V>& f) {

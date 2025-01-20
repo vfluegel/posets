@@ -329,7 +329,7 @@ namespace posets::utils {
         // If we had to shift every element, there will be something left to insert
         // We add it to the new end
         if (to_insert.has_value ())
-          children[next_insertion] = to_insert.value ();
+          children[next_insertion] = *to_insert;
 
         // Increase count by the new element
         node.numchild++;
@@ -553,8 +553,8 @@ namespace posets::utils {
        * on the list itself. It can be traded off by a factor of k (see TODO in
        * code).
        */
-      size_t build_node (std::vector<size_t>& vecs, size_t current_layer,
-                         const auto& element_vec, bool check_sim=true) {
+      size_t build_node (std::vector<size_t>& vecs, size_t current_layer, const auto& element_vec,
+                         bool check_sim = true) {
         assert (not vecs.empty ());
         // If currentLayer is 0, we set the label to the dummy value -1 for the root
         // Else all nodes should have the same value at index currentLayer - 1, so
@@ -590,8 +590,8 @@ namespace posets::utils {
 
             for (auto& [n, children] : new_partition) {
               // Build a new son for each individual value at currentLayer + 1
-              const size_t new_son = build_node (children, current_layer + 1,
-                                                 element_vec, check_sim);
+              const size_t new_son =
+                  build_node (children, current_layer + 1, element_vec, check_sim);
               bool found = false;
               if (check_sim) {
                 size_t* current_children = child_buffer + new_node.cbuffer_offset;
@@ -792,7 +792,7 @@ namespace posets::utils {
        * DFA representation of (bisimulation non-dominated) vectors, it could be
        * exponentially faster than this.
        */
-      bool covers_vector (size_t root, const V& covered, bool strict=false) {
+      bool covers_vector (size_t root, const V& covered, bool strict = false) {
         // Stack with tuples (layer, node id, strictness, child id)
         std::stack<std::tuple<size_t, size_t, bool, size_t>> to_visit;
         // Visited cache
@@ -871,7 +871,7 @@ namespace posets::utils {
       }
 
       template <std::ranges::input_range R>
-      size_t add_vectors (R&& elements, bool check_sim=true) {
+      size_t add_vectors (R&& elements, bool check_sim = true) {
         assert (not layers.empty ());
 
         auto element_vec = std::forward<R> (elements);
