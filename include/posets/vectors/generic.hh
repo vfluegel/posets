@@ -194,7 +194,7 @@ namespace posets::vectors {
             res.data ()[i] = std::experimental::min (data ()[i], rhs.data ()[i]);
           else
             for (size_t j = 0; j < items_per_block; ++j) {
-              auto pos = i * items_per_block + j;
+              auto pos = (i * items_per_block) + j;
               res.at (pos) = std::min ((*this)[pos], rhs[pos]);
             }
 

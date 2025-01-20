@@ -132,7 +132,7 @@ namespace posets::utils {
         size_t* children = child_buffer + node.cbuffer_offset;
 
         while (left <= right) {
-          size_t mid = left + (right - left) / 2;
+          size_t mid = left + ((right - left) / 2);
           assert (mid < node.numchild);
           typename V::value_type mid_val = layers[child_layer][children[mid]].label;
 
@@ -275,7 +275,7 @@ namespace posets::utils {
         const st_node& son_node = layers[son_layer][son];
         size_t* children = child_buffer + node.cbuffer_offset;
         while (left <= right) {
-          const int mid = left + (right - left) / 2;
+          const int mid = left + ((right - left) / 2);
           assert (mid < static_cast<int> (node.numchild));
           assert (mid >= 0);
           assert (children[mid] < layers[son_layer].size ());
@@ -799,6 +799,7 @@ namespace posets::utils {
         std::stack<std::tuple<size_t, size_t, bool, size_t>> to_visit;
         // Visited cache
         std::vector<std::unordered_map<size_t, bool>> visited;
+        visited.reserve (this->dim + 1);
         for (size_t i = 0; i < this->dim + 1; i++)
           visited.emplace_back ();
 
@@ -881,7 +882,9 @@ namespace posets::utils {
         // the original vectors, we insert the root too: an empty prefix mapped to
         // the set of all indices
         std::vector<size_t> vector_ids (element_vec.size ());
+        // NOLINTBEGIN(boost-use-ranges)
         std::iota (vector_ids.begin (), vector_ids.end (), 0);
+        // NOLINTEND(boost-use-ranges)
 
         const size_t root_id = build_node (vector_ids, 0, element_vec, check_sim);
 #ifndef NDEBUG

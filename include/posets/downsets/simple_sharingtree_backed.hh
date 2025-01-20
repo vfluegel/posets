@@ -118,7 +118,7 @@ namespace posets::downsets {
       simple_sharingtree_backed& operator= (const simple_sharingtree_backed&) = delete;
       simple_sharingtree_backed& operator= (simple_sharingtree_backed&&) = default;
 
-      simple_sharingtree_backed (std::vector<V>&& elements) {
+      simple_sharingtree_backed (std::vector<V>&& elements) noexcept {
         init_forest (elements.begin ()->size ());
         reset_tree (std::move (elements));
         assert (this->is_antichain ());

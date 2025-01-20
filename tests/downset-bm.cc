@@ -55,37 +55,38 @@ namespace {
   std::default_random_engine::result_type starting_seed = 0;
 
   std::map<std::string, size_t> params = {
-  {"maxval", 12},
-  {"build", 10240 * 2},
-  {"query", 10240 * 4},
-  {"transfer", 1000000},
-  {"intersection", 256},
-  {"union", 512 * 20},
-  {"rounds", 1}
-};
+    {"maxval", 12},
+    {"build", 10240 * 2},
+    {"query", 10240 * 4},
+    {"transfer", 1000000},
+    {"intersection", 256},
+    {"union", 512 * 20},
+    {"rounds", 1}
+  };
 
   std::mt19937 rand_gen;
   std::uniform_int_distribution<uint32_t> distrib;
+
+  template <typename T>
+  auto random_vector () {
+    utils::vector_mm<T> v (DIMENSION);
+    std::generate (v.begin(), v.end(), [&] () { return distrib (rand_gen); });
+    return v;
+  }
+
+  struct {
+      size_t t1_sz, t1_in, t1_out;
+      size_t t2_sz;
+      size_t t3_sz;
+  } test_chk = {};
 }
 
-template <typename T>
-auto random_vector () {
-  utils::vector_mm<T> v (DIMENSION);
-  std::generate (v.begin(), v.end(), [&] () { return distrib (rand_gen); });
-  return v;
-}
 
 template <class T, class = void>
 struct has_insert : std::false_type {};
 
 template <class T>
 struct has_insert<T, std::void_t<decltype(std::declval<T>().insert (std::declval<typename T::value_type> ()))>> : std::true_type {};
-
-struct {
-    size_t t1_sz, t1_in, t1_out;
-    size_t t2_sz;
-    size_t t3_sz;
-} test_chk = {};
 
 #define chk(Field, Value, Fail)                                                              \
   do {                                                                                       \
@@ -208,8 +209,8 @@ struct test_t : public generic_test<result_t> {
           auto set = vec_to_set (test_vector (nitems));
           auto vec = test_vector (2 * nitems);
           decltype (vec) vec2;
-          vec2.insert (vec2.end (), std::make_move_iterator (vec.begin () + nitems / 2),
-                       std::make_move_iterator (vec.begin () + 3 * nitems / 2));
+          vec2.insert (vec2.end (), std::make_move_iterator (vec.begin () + (nitems / 2)),
+                       std::make_move_iterator (vec.begin () + ((3 * nitems) / 2)));
           auto set2 = vec_to_set (std::move (vec2));
           verb_do (2, vout << "INTERSECT...";);
           sw.start ();
@@ -238,8 +239,8 @@ struct test_t : public generic_test<result_t> {
           auto set = vec_to_set (test_vector (nitems));
           auto vec = test_vector (2 * nitems);
           decltype (vec) vec2;
-          vec2.insert (vec2.end (), std::make_move_iterator (vec.begin () + nitems / 2),
-                       std::make_move_iterator (vec.begin () + 3 * nitems / 2));
+          vec2.insert (vec2.end (), std::make_move_iterator (vec.begin () + (nitems / 2)),
+                       std::make_move_iterator (vec.begin () + ((3 * nitems) / 2)));
           auto set2 = vec_to_set (std::move (vec2));
           verb_do (2, vout << "UNION...";);
           sw.start ();
@@ -295,38 +296,39 @@ using set_types = template_type_list<
   posets::downsets::simple_sharingtree_backed
   >;
 
-void usage (const char* progname, bool error = true) {
-  std::cout << "usage: " << progname << " [-v -v -v...] [--params PARAMS] [--seed N] SETTYPE VECTYPE\n";
-
-  std::cout << "List of parameters:\n";
-  for (auto& [p, v] : params)
-    std::cout << "  " << p << " (default: " << v << ")\n";
-  std::cout << '\n';
-  std::cout << "  SETTYPE:\n  - all\n";
-  for (auto&& s : set_names) {
-    auto start = s.find_last_of (':') + 1;
-    std::cout << "  - " << s.substr (start, s.find_first_of ('<') - start) << '\n';
-  }
-
-  std::cout << "  VECTYPE:\n  - all\n";
-  for (auto&& s : vector_names) {
-    auto start = s.find_last_of (':') + 1;
-    std::cout << "  - " << s.substr (start, s.find_first_of ('>') - start + 1) << '\n';
-  }
-
-  exit (error ? 1 : 0);
-}
 
 namespace {
+  void usage (const char* progname, bool error = true) {
+    std::cout << "usage: " << progname << " [-v -v -v...] [--params PARAMS] [--seed N] SETTYPE VECTYPE\n";
+
+    std::cout << "List of parameters:\n";
+    for (auto& [p, v] : params)
+      std::cout << "  " << p << " (default: " << v << ")\n";
+    std::cout << '\n';
+    std::cout << "  SETTYPE:\n  - all\n";
+    for (auto&& s : set_names) {
+      auto start = s.find_last_of (':') + 1;
+      std::cout << "  - " << s.substr (start, s.find_first_of ('<') - start) << '\n';
+    }
+
+    std::cout << "  VECTYPE:\n  - all\n";
+    for (auto&& s : vector_names) {
+      auto start = s.find_last_of (':') + 1;
+      std::cout << "  - " << s.substr (start, s.find_first_of ('>') - start + 1) << '\n';
+    }
+
+    exit (error ? 1 : 0);
+  }
+
   const auto LONG_OPTIONS =
-      std::to_array<struct option> ({{"seed", required_argument, nullptr, 's'},
-                                     {"verbose", no_argument, nullptr, 'v'},
-                                     {"params", required_argument, nullptr, 'p'},
-                                     {"help", no_argument, nullptr, 'h'},
-                                     {nullptr, 0, nullptr, 0}});
+      std::to_array<struct option> ({{.name="seed",    .has_arg=required_argument, .flag=nullptr, .val='s'},
+                                     {.name="verbose", .has_arg=no_argument,       .flag=nullptr, .val='v'},
+                                     {.name="params",  .has_arg=required_argument, .flag=nullptr, .val='p'},
+                                     {.name="help",    .has_arg=no_argument,       .flag=nullptr, .val='h'},
+                                     {.name=nullptr,   .has_arg=0,                 .flag=nullptr, .val= 0}});
 }
 
-int main (int argc, char* argv[]) {
+int main (int argc, char* argv[]) noexcept {
   const char* prog = argv[0];
 
   register_maker<false> ((vector_types*) nullptr, (set_types*) nullptr);
