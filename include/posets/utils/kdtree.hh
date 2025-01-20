@@ -205,7 +205,9 @@ namespace posets::utils {
 
         // We now prepare the list of indices to include in the tree
         std::vector<size_t> points (this->vector_set.size ());
+        // NOLINTBEGIN(boost-use-ranges)
         std::iota (points.begin (), points.end (), 0);
+        // NOLINTEND(boost-use-ranges)
         if (this->tree == nullptr)
           this->tree = new kdtree_node[tsize];
         if (this->tree != nullptr and oldsize < tsize) {
@@ -240,10 +242,7 @@ namespace posets::utils {
         other.tree = nullptr;
       }
 
-      ~kdtree () {
-        if (this->tree != nullptr)
-          delete[] this->tree;
-      }
+      ~kdtree () { delete[] this->tree; }
 
       kdtree& operator= (kdtree&& other) noexcept {
         this->dim = other.dim;
@@ -255,8 +254,7 @@ namespace posets::utils {
         // NOTE: this must be here, after having a local copy of the other
         // tree and before moving it to here, because of self-assignment
         // safety!
-        if (this->tree != nullptr)
-          delete[] this->tree;
+        delete[] this->tree;
         // we now copy things here and return
         this->tree = temp_tree;
         return *this;

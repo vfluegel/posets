@@ -32,6 +32,16 @@ int main (int argc, const char* argv[]) {
   v = {9, 4, 8};
   assert (not f.covers_vector (idcs, VType (std::move (v))));
 
+  // We do some longer examples
+  utils::sharingforest<VType> f10 {10};
+  std::vector<std::vector<char>> longdata {{2, 4, 1, 8, 7, 4, 1, 10, 2, 8}};
+  auto longidcs = f10.add_vectors (std::move (vvtovv (longdata)));
+  v = {2, 4, 1, 8, 5, 4, 1, 8, 1, 9};
+  assert (not f10.covers_vector (longidcs, VType (std::move (v))));
+  v = {2, 4, 1, 6, 7, 4, 1, 10, 0, 4};
+  assert (f10.covers_vector (longidcs, VType (std::move (v)), false));
+  assert (f10.covers_vector (longidcs, VType (std::move (v)), true));
+
   // Test adding a second tree to the forest
   data = {{7, 4, 3}, {4, 8, 4}, {2, 5, 6}};
   auto idcs2 = f.add_vectors (std::move (vvtovv (data)));

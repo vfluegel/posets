@@ -5,6 +5,7 @@ header_files = [
   'posets/downsets/kdtree_backed.hh',
   'posets/downsets/set_backed.hh',
   'posets/downsets/sharingtree_backed.hh',
+  'posets/downsets/simple_sharingtree_backed.hh',
   'posets/downsets/vector_backed.hh',
   'posets/downsets/vector_backed_bin.hh',
   'posets/downsets/vector_backed_one_dim_split_intersection_only.hh',

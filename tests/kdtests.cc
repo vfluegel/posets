@@ -58,7 +58,7 @@ int test() {
                                {-1, 0},
                                {-1, 0},
                                {0, -1}}));
-  tree.dominates (VType (il {0, -1}));
+  assert (tree.dominates (VType (il {0, -1})));
 
   std::vector<VType> list = vvtovv({
     { 0, 1, 9, 5, 1, 2, 0, 8, 1, 0, 1, 6, 9, 0, 0, 6, 8, 0, 4, 0, 5, 8, 5, 0, 6, 6, 1, 6, 5, 9, 3, 1 },

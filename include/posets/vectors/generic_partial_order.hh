@@ -27,8 +27,8 @@ namespace posets::vectors {
           }
           else {
             for (size_t i = 0; i < Vec::items_per_block; ++i) {
-              auto diff =
-                  lhs[up_to * Vec::items_per_block + i] - rhs[up_to * Vec::items_per_block + i];
+              auto diff = lhs[(up_to * Vec::items_per_block) + i] -
+                          rhs[(up_to * Vec::items_per_block) + i];
               bgeq = bgeq and (diff >= 0);
               bleq = bleq and (diff <= 0);
             }
@@ -59,8 +59,8 @@ namespace posets::vectors {
             bgeq = bgeq and (std::experimental::all_of (lhs.data ()[up_to] >= rhs.data ()[up_to]));
           else
             for (size_t i = 0; i < Vec::items_per_block; ++i) {
-              auto diff =
-                  lhs[up_to * Vec::items_per_block + i] - rhs[up_to * Vec::items_per_block + i];
+              auto diff = lhs[(up_to * Vec::items_per_block) + i] -
+                          rhs[(up_to * Vec::items_per_block) + i];
               bgeq = bgeq and (diff >= 0);
             }
 
@@ -80,8 +80,8 @@ namespace posets::vectors {
             bleq = bleq and (std::experimental::all_of (lhs.data ()[up_to] <= rhs.data ()[up_to]));
           else
             for (size_t i = 0; i < Vec::items_per_block; ++i) {
-              auto diff =
-                  lhs[up_to * Vec::items_per_block + i] - rhs[up_to * Vec::items_per_block + i];
+              auto diff = lhs[(up_to * Vec::items_per_block) + i] -
+                          rhs[(up_to * Vec::items_per_block) + i];
               bleq = bleq and (diff <= 0);
             }
 
