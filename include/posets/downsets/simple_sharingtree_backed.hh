@@ -41,53 +41,21 @@ namespace posets::downsets {
         }
       }
 
-      // Code borrowed from kdtree_backed, same idea as there to avoid
-      // duplicates, and then to keep the antichain of max elements only
+      // Code borrowed from kdtree_backed, same idea as there
+      // to keep the antichain of max elements only
       void reset_tree (std::vector<V>&& elements) noexcept {
-        std::vector<V*> pelements;
-        pelements.reserve (elements.size ());
-        for (auto& e : elements)
-          pelements.push_back (&e);
+        const size_t temp_tree = this->forest->add_vectors (std::move (elements), false);
+        this->vector_set = this->forest->get_all (temp_tree);
 
-        std::sort (pelements.begin (), pelements.end (),
-                   // A strict total order.
-                   [] (const V* v1, const V* v2) {
-                     // A quite costly thing to do.
-                     for (size_t i = 0; i < v1->size (); ++i) {
-                       if ((*v1)[i] > (*v2)[i])
-                         return false;
-                       if ((*v1)[i] < (*v2)[i])
-                         return true;
-                     }
-                     // Equal MUST return false.
-                     return false;
-                   });
-
-        // then remove duplicates
-        size_t dups_pos = pelements.size ();
-        for (size_t i = pelements.size () - 1; i > 0; --i)
-          if (*pelements[i] == *pelements[i - 1])
-            std::swap (pelements[i], pelements[--dups_pos]);
-        if (dups_pos != pelements.size ())
-          pelements.erase (pelements.begin () + dups_pos, pelements.end ());
-
-        // now, we can make a tree out of the set to eliminate dominated
-        // elements
-        std::vector<V> set_elements;
-        set_elements.reserve (pelements.size ());
-        for (auto& e : pelements)
-          set_elements.push_back (e->copy ());
-
-        const size_t temp_tree = this->forest->add_vectors (std::move (set_elements), false);
-
+        // we can use the temporary tree to eliminate dominated elements
         std::vector<V> antichain;
         std::vector<V> result;
-        antichain.reserve (pelements.size ());
-        result.reserve (pelements.size ());
-        for (auto& e : pelements) {
-          if (not this->forest->covers_vector (temp_tree, *e, true)) {
-            antichain.push_back (e->copy ());
-            result.push_back (std::move (*e));
+        antichain.reserve (this->vector_set.size ());
+        result.reserve (this->vector_set.size ());
+        for (auto& e : this->vector_set) {
+          if (not this->forest->covers_vector (temp_tree, e, true)) {
+            antichain.push_back (e.copy ());
+            result.push_back (std::move (e));
           }
         }
 
