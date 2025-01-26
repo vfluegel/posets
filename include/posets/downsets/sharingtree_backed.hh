@@ -107,7 +107,7 @@ namespace posets::downsets {
 
   template <Vector V>
   inline std::ostream& operator<< (std::ostream& os, const sharingtree_backed<V>& f) {
-    for (auto&& el : f.vector_set)
+    for (auto&& el : f.get_backing_vector ())
       os << el << std::endl;
     return os;
   }
