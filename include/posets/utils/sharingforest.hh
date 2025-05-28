@@ -307,7 +307,7 @@ namespace posets::utils {
               // We can directly overwrite the value with our current one
               children[next_insertion] = children[i];
             }
-            else {
+            else if (to_insert.has_value ()){
               // The space we want to insert is occupied - we save the value for later
               size_t temp = children[i];
               children[next_insertion] = to_insert.value ();
