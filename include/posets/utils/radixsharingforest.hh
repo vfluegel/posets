@@ -187,16 +187,16 @@ namespace posets::utils {
           n2 = layers[layidx][n2idx];
 
           if (n1.label.size() > 1) {
-            std::vector<size_t> candidates { n2idx };
+            std::vector<size_t> candidates {n2idx};
             size_t current_layidx = layidx;
             bool all_simulated = true;
             // Compare every branch in n2 -> every branch needs to be smaller 
-            for (auto d = n1.label.begin(); d != n1.label.end() - 1; ++d) {
+            for (auto d = n1.label.begin (); d != n1.label.end () - 1; ++d) {
               std::vector<size_t> new_candidates;
               for (size_t otheridx : candidates) {
                 st_node other_node = layers[current_layidx][otheridx];
-                if (other_node.label.size() > 1) {
-                  bool simulates = std::equal(d, n1.label.end(), other_node.label.begin(), other_node.label.end(),
+                if (other_node.label.size () > 1) {
+                  bool simulates = std::equal (d, n1.label.end (), other_node.label.begin (), other_node.label.end (),
                                               [](auto val1, auto val2) { return val1 >= val2; });
                   if (not simulates) {
                     all_simulated = false;
@@ -208,7 +208,7 @@ namespace posets::utils {
                   // all children need to be smaller, so we only have to consider nodes where the greatest child is simulated
                   if (other_node.label[0] <= *d and layers[current_layidx + 1][other_children[0]].label[0] <= *(d + 1)) {
                     for (size_t c = 0; c < other_node.numchild; c++) {
-                      new_candidates.push_back(other_children[c]);
+                      new_candidates.push_back (other_children[c]);
                     }
                   }
                   else {
@@ -233,25 +233,25 @@ namespace posets::utils {
                 current_stack.emplace (m1idx, d1 + 1, m2idx, d2, ell);
             }
           }
-          else if (n2.label.size() > 1) {
+          else if (n2.label.size () > 1) {
             // search through the subtree n1 to see if one path simulates it
             // Stack with node ID, child ID and layer offset
             std::stack<std::tuple<size_t, size_t, size_t>> df_stack;
             assert(c1 == 0); // We shouldn't have checked children already
             df_stack.emplace (n1idx, 0, 0);
             bool found_simulating = false;
-            while (not df_stack.empty()) {
-              auto [other_id, child, layer_offset] = df_stack.top();
-              df_stack.pop();
+            while (not df_stack.empty ()) {
+              auto [other_id, child, layer_offset] = df_stack.top ();
+              df_stack.pop ();
               st_node other_node = layers[layidx + layer_offset][other_id];
-              if (other_node.label.size() > 1) {
-                bool simulates = std::equal(n2.label.begin() + layer_offset, n2.label.end(), other_node.label.begin(), other_node.label.end(),
+              if (other_node.label.size () > 1) {
+                bool simulates = std::equal (n2.label.begin () + layer_offset, n2.label.end (), other_node.label.begin (), other_node.label.end (),
                                               [](auto val2, auto val1) { return val1 >= val2; });
                 if (simulates) {
                   found_simulating = true;
                   break;
                 }
-                else if (not df_stack.empty()) {
+                else if (not df_stack.empty ()) {
                   // No hit yet... Investigate the next child
                   auto [prev_id, child, prev_layer] = df_stack.top ();
                   df_stack.pop ();
@@ -518,10 +518,10 @@ namespace posets::utils {
           }
 
           auto& under_construction = layers[layer].back ();
-          if (node_s.label.size() > 1 or node_t.label.size() > 1) {
+          if (node_s.label.size () > 1 or node_t.label.size () > 1) {
             assert(c_s == 0 and c_t == 0);
-            auto& compressed_node_label = node_s.label.size() > 1 ? node_s.label : node_t.label;
-            auto other_node_id = node_s.label.size() > 1 ? n_t : n_s;
+            auto& compressed_node_label = node_s.label.size () > 1 ? node_s.label : node_t.label;
+            auto other_node_id = node_s.label.size () > 1 ? n_t : n_s;
             auto& other_node = layers[layer][other_node_id];
             
             std::vector<size_t> equal_path {other_node_id};
@@ -531,23 +531,23 @@ namespace posets::utils {
             }
             // First go down the tree: As long as we find equal children, we add them to the path
             while (identical_son.has_value ()) {
-              std::vector<typename V::value_type> identical_label {compressed_node_label[equal_path.size()]};
-              size_t prev_identical = identical_son.value();
-              auto identical_node = layers[layer + equal_path.size()][prev_identical];
-              layers[layer + equal_path.size()].emplace_back(0, identical_label, add_children (identical_node.numchild + 1));
+              std::vector<typename V::value_type> identical_label {compressed_node_label[equal_path.size ()]};
+              size_t prev_identical = identical_son.value ();
+              auto identical_node = layers[layer + equal_path.size ()][prev_identical];
+              layers[layer + equal_path.size ()].emplace_back (0, identical_label, add_children (identical_node.numchild + 1));
               
               equal_path.push_back (prev_identical);
-              if (identical_node.numchild > 0 and layer + equal_path.size() < this->dim) {
-                identical_son = has_son (identical_node, layer + equal_path.size(), compressed_node_label[equal_path.size()]);
+              if (identical_node.numchild > 0 and layer + equal_path.size () < this->dim) {
+                identical_son = has_son (identical_node, layer + equal_path.size (), compressed_node_label[equal_path.size ()]);
               }
               else 
-                identical_son.reset();
+                identical_son.reset ();
             }
 
-            assert (layer + equal_path.size() <= this->dim);
-            size_t ndix_to_union = equal_path.back();
-            st_node& node_to_union = layers[layer + equal_path.size() - 1][ndix_to_union];
-            st_node union_son = layers[layer + equal_path.size() - 1].back();
+            assert (layer + equal_path.size () <= this->dim);
+            size_t ndix_to_union = equal_path.back ();
+            st_node& node_to_union = layers[layer + equal_path.size () - 1][ndix_to_union];
+            st_node union_son = layers[layer + equal_path.size () - 1].back ();
 
             if (layer + equal_path.size() == this->dim) {
               // The compressed node is completely equal to a path in the other node - we just use that
@@ -560,48 +560,48 @@ namespace posets::utils {
             }
 
             // Node still good here!!
-            if (node_to_union.label.size() > 1) {
+            if (node_to_union.label.size () > 1) {
               // Special case: we have a node with a multi-element label (can only happen for the last!)
-              bool compressed_simulates = std::equal(compressed_node_label.begin() + equal_path.size(), compressed_node_label.end(), node_to_union.label.begin() + 1, node_to_union.label.end(),
+              bool compressed_simulates = std::equal (compressed_node_label.begin () + equal_path.size (), compressed_node_label.end (), node_to_union.label.begin () + 1, node_to_union.label.end (),
                                               [](auto compressed, auto other) { return compressed >= other; });
               if (compressed_simulates) {
                 // We only need to keep the original vector
-                union_son.label.insert(union_son.label.end(), compressed_node_label.begin() + equal_path.size(), compressed_node_label.end());
+                union_son.label.insert (union_son.label.end (), compressed_node_label.begin () + equal_path.size (), compressed_node_label.end ());
               }
               else {
                 // Also check the other direction
-                bool other_simulates = std::equal(compressed_node_label.begin() + equal_path.size(), compressed_node_label.end(), node_to_union.label.begin() + 1, node_to_union.label.end(),
+                bool other_simulates = std::equal (compressed_node_label.begin () + equal_path.size (), compressed_node_label.end (), node_to_union.label.begin () + 1, node_to_union.label.end (),
                                           [](auto compressed, auto other) { return compressed <= other; });
                 if (other_simulates) {
-                  union_son.label.insert(union_son.label.end(), node_to_union.label.begin() + 1, node_to_union.label.end());
+                  union_son.label.insert (union_son.label.end (), node_to_union.label.begin () + 1, node_to_union.label.end ());
                 }
                 else {
                   // The two multi-element vectors might have more equivalent elements, we have to create those
-                  std::vector<st_node> intermediaries { };
+                  std::vector<st_node> intermediaries {};
                   size_t i;
-                  size_t length_offset = equal_path.size();
-                  assert (node_to_union.label.size() > 1);
-                  assert (compressed_node_label.size() > length_offset);
+                  size_t length_offset = equal_path.size ();
+                  assert (node_to_union.label.size () > 1);
+                  assert (compressed_node_label.size () > length_offset);
                   for (i = 1; compressed_node_label[length_offset] == node_to_union.label[i]; i++) {
                     // The two vectors are equal - we need intermediary nodes
                     std::vector<typename V::value_type> intermediary_label {compressed_node_label[length_offset]};
-                    intermediaries.emplace_back(0, intermediary_label, add_children(2));
+                    intermediaries.emplace_back (0, intermediary_label, add_children (2));
                     length_offset++;
-                    assert (i + 1 < node_to_union.label.size());
-                    assert (length_offset < compressed_node_label.size());
+                    assert (i + 1 < node_to_union.label.size ());
+                    assert (length_offset < compressed_node_label.size ());
                   }
                   assert (layer + length_offset <= this->dim);
                   // Create the two new sons
-                  std::vector<typename V::value_type> new_compressed_label {compressed_node_label.begin() + length_offset, compressed_node_label.end()};
+                  std::vector<typename V::value_type> new_compressed_label {compressed_node_label.begin () + length_offset, compressed_node_label.end()};
                   st_node new_compressed_son {0, new_compressed_label};
-                  size_t compressed_son_id = add_node(new_compressed_son, layer + length_offset);
-                  std::vector<typename V::value_type> new_other_label {node_to_union.label.begin() + i, node_to_union.label.end()};
+                  size_t compressed_son_id = add_node (new_compressed_son, layer + length_offset);
+                  std::vector<typename V::value_type> new_other_label {node_to_union.label.begin () + i, node_to_union.label.end ()};
                   st_node new_other_son {0, new_other_label};
-                  size_t other_son_id = add_node(new_other_son, layer + length_offset);
+                  size_t other_son_id = add_node (new_other_son, layer + length_offset);
                   // Add the nodes as son (in order)
-                  if (intermediaries.size() > 0) {
-                    st_node intermediary_father = intermediaries.back();
-                    intermediaries.pop_back();
+                  if (intermediaries.size () > 0) {
+                    st_node intermediary_father = intermediaries.back ();
+                    intermediaries.pop_back ();
                     if (new_compressed_label[0] > new_other_label[0]) {
                       add_son (intermediary_father, layer + length_offset, compressed_son_id);
                       add_son (intermediary_father, layer + length_offset, other_son_id);
@@ -622,12 +622,12 @@ namespace posets::utils {
                   }
                   else {
                     if (new_compressed_label[0] > new_other_label[0]) {
-                      add_son(union_son, layer + length_offset, compressed_son_id);
-                      add_son(union_son, layer + length_offset, other_son_id);
+                      add_son (union_son, layer + length_offset, compressed_son_id);
+                      add_son (union_son, layer + length_offset, other_son_id);
                     }
                     else {
-                      add_son(union_son, layer + length_offset, other_son_id);
-                      add_son(union_son, layer + length_offset, compressed_son_id);
+                      add_son (union_son, layer + length_offset, other_son_id);
+                      add_son (union_son, layer + length_offset, compressed_son_id);
                     }
                   }
                 }
@@ -635,55 +635,55 @@ namespace posets::utils {
             }
             else {
               // Create the new node with the remaining label
-              std::vector<typename V::value_type> remaining_compressed_label {compressed_node_label.begin() + equal_path.size(), 
-                                                                            compressed_node_label.end()};
+              std::vector<typename V::value_type> remaining_compressed_label {compressed_node_label.begin () + equal_path.size (), 
+                                                                            compressed_node_label.end ()};
               st_node new_compressed_node {0, remaining_compressed_label};
-              size_t new_node_idx = add_node(new_compressed_node, layer + equal_path.size());
+              size_t new_node_idx = add_node (new_compressed_node, layer + equal_path.size ());
 
               // Add the sons to the union_son node
-              size_t child_layer = layer + equal_path.size();
+              size_t child_layer = layer + equal_path.size ();
               size_t current_child = 0;
               size_t* original_children = child_buffer + node_to_union.cbuffer_offset;
               if (node_to_union.numchild > 0) {
                 st_node& original_child = layers[child_layer][original_children[0]];
                 // Add all the children with larger labels first
                 while (current_child < node_to_union.numchild and original_child.label[0] > new_compressed_node.label[0]) {
-                  add_son(union_son, child_layer, original_children[current_child]);
+                  add_son (union_son, child_layer, original_children[current_child]);
                   original_child = layers[child_layer][original_children[current_child]];
                   current_child++;
                 }
               }
-              add_son_if_not_simulated(new_node_idx, child_layer, union_son);
+              add_son_if_not_simulated (new_node_idx, child_layer, union_son);
               for (; current_child < node_to_union.numchild; current_child++) {
-                add_son_if_not_simulated(original_children[current_child], child_layer, union_son);
+                add_son_if_not_simulated (original_children[current_child], child_layer, union_son);
               }
             }
 
             auto& father_path = layers[layer - 1].back ();
             size_t* father_pathchildren = father_path.cbuffer_offset + child_buffer;
             for (size_t c = 0; c < father_path.numchild; c++) {
-              print_children(father_pathchildren[c], layer);
+              print_children (father_pathchildren[c], layer);
             }
 
-            layers[layer + equal_path.size() - 1].pop_back();
+            layers[layer + equal_path.size () - 1].pop_back ();
             
-            size_t union_son_idx = add_node (union_son, layer + equal_path.size() - 1);
+            size_t union_son_idx = add_node (union_son, layer + equal_path.size () - 1);
             // Now its time to go back up 
-            while (equal_path.size() > 1) {
-              equal_path.pop_back();
-              size_t ndix_to_union = equal_path.back();
-              st_node& node_to_union = layers[layer + equal_path.size() - 1][ndix_to_union];
+            while (equal_path.size () > 1) {
+              equal_path.pop_back ();
+              size_t ndix_to_union = equal_path.back ();
+              st_node& node_to_union = layers[layer + equal_path.size () - 1][ndix_to_union];
               
-              st_node equal_father = layers[layer + equal_path.size() - 1].back();
-              layers[layer + equal_path.size() - 1].pop_back();
-              size_t child_layer = layer + equal_path.size();
+              st_node equal_father = layers[layer + equal_path.size () - 1].back ();
+              layers[layer + equal_path.size () - 1].pop_back ();
+              size_t child_layer = layer + equal_path.size ();
               size_t current_child = 0;
               size_t* original_children = child_buffer + node_to_union.cbuffer_offset;
               if (node_to_union.numchild > 0) {
                 st_node& original_child = layers[child_layer][original_children[0]];
                 // Add all the children with larger labels first
                 while (current_child < node_to_union.numchild and original_child.label[0] > union_son.label[0]) {
-                  add_son(equal_father, child_layer, original_children[current_child]);
+                  add_son (equal_father, child_layer, original_children[current_child]);
                   original_child = layers[child_layer][original_children[current_child]];
                   current_child++;
                 }
@@ -691,16 +691,16 @@ namespace posets::utils {
               // Skip the equal child - we replace it with our new one
               current_child++;
               // Then add the new son
-              add_son_if_not_simulated(union_son_idx, child_layer, equal_father);
+              add_son_if_not_simulated (union_son_idx, child_layer, equal_father);
               // And also add the smaller children
               for (; current_child < node_to_union.numchild; current_child++) {
-                add_son_if_not_simulated(original_children[current_child], child_layer, equal_father);
+                add_son_if_not_simulated (original_children[current_child], child_layer, equal_father);
               }
               union_son_idx = add_node (equal_father, child_layer - 1);
               union_son = layers[child_layer - 1][union_son_idx];
             }
 
-            assert(layer + equal_path.size() - 1 == layer);
+            assert(layer + equal_path.size () - 1 == layer);
             st_node created = layers[layer][union_son_idx];
             // Lastly, we commit the node
             auto& father = layers[layer - 1].back ();
@@ -717,10 +717,8 @@ namespace posets::utils {
             // The very first thing to do is to check whether our draft of node is
             // not a repetition of something in the table already!
             auto& father = layers[layer - 1].back ();
-            auto new_node = layers[layer].back();
             layers[layer].pop_back ();
-            auto [union_res, domd] = add_if_not_simulated (new_node, layer, father);
-            print_children(union_res, layer);
+            auto [union_res, domd] = add_if_not_simulated (under_construction, layer, father);
             cached_union[layer][std::make_pair (n_s, n_t)] = union_res;
             if (not domd)
               add_son (father, layer, union_res);
@@ -735,12 +733,12 @@ namespace posets::utils {
             // Case 1: One node is "done"
             // We add the existing node (including all its sons!) to the node
             // currently being constructed
-            if (node_s.label.size() == 1 and c_s == node_s.numchild) {
+            if (node_s.label.size () == 1 and c_s == node_s.numchild) {
               add_son_if_not_simulated (node_t_children[c_t], layer + 1, under_construction);
               if (c_t < node_t.numchild)
                 current_stack.emplace (n_s, c_s, n_t, c_t + 1, layer);
             }
-            else if (node_t.label.size() == 1 and c_t == node_t.numchild) {
+            else if (node_t.label.size () == 1 and c_t == node_t.numchild) {
               add_son_if_not_simulated (node_s_children[c_s], layer + 1, under_construction);
               if (c_s < node_s.numchild)
                 current_stack.emplace (n_s, c_s + 1, n_t, c_t, layer);
@@ -795,7 +793,7 @@ namespace posets::utils {
                          const auto& element_vec) {
         assert (not vecs.empty ());
         st_node new_node {0};
-        if (current_layer > 0 and vecs.size() == 1) {
+        if (current_layer > 0 and vecs.size () == 1) {
           auto& vec = element_vec[vecs[0]];
           std::vector<typename V::value_type> label_vec {vec.begin () + (current_layer - 1), vec.end ()};
           new_node.label = label_vec;
@@ -808,7 +806,7 @@ namespace posets::utils {
                                                   ? static_cast<typename V::value_type> (-1)
                                                   : element_vec[vecs[0]][current_layer - 1]};
           
-          std::vector<typename V::value_type> label_vec { label };
+          std::vector<typename V::value_type> label_vec {label};
           new_node.label = label_vec;
           
           // We have not reached the last layer - so add children
@@ -878,14 +876,14 @@ namespace posets::utils {
           const auto parent = layers[lay][node];
           // first time we see parent? get its label
           if (child == 0)
-            temp.insert(temp.end(), parent.label.begin(), parent.label.end());
+            temp.insert(temp.end (), parent.label.begin (), parent.label.end ());
 
           // base case: reached the bottom layer
-          if (lay == this->dim or parent.label.size() > 1) {
+          if (lay == this->dim or parent.label.size () > 1) {
             assert (child == 0);
             std::vector<typename V::value_type> cpy {temp};
             res.push_back (V (std::move (cpy)));
-            temp.resize(temp.size() - parent.label.size());  // done with this node
+            temp.resize (temp.size () - parent.label.size ());  // done with this node
           }
           else {  // recursive case
             // Either we're done with this node and we just mark it as visited or
@@ -994,9 +992,9 @@ namespace posets::utils {
                 ((not owe_strict) and covered[lay - 1] == parent.label[0]))
               return true;
           }
-          else if (parent.label.size() > 1) {
+          else if (parent.label.size () > 1) {
             // We found a condensed node - we can compare all the rest
-            bool covers = std::equal(parent.label.begin(), parent.label.end(), covered.begin() + (lay - 1), covered.end(),
+            bool covers = std::equal (parent.label.begin (), parent.label.end (), covered.begin () + (lay - 1), covered.end (),
                                               [strict, owe_strict](auto node_val, auto covered_val) { return (strict && owe_strict) ? (node_val > covered_val) : (node_val >= covered_val); });
             if (covers)
               return true;
